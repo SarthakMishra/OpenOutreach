@@ -142,8 +142,6 @@ def _send_message(session: "AccountSession", profile: Dict[str, Any], message: s
 
 if __name__ == "__main__":
     import sys
-    from linkedin.sessions.registry import SessionKey
-    from linkedin.campaigns.connect_follow_up import INPUT_CSV_PATH
 
     logging.getLogger().handlers.clear()
     logging.basicConfig(
@@ -158,16 +156,12 @@ if __name__ == "__main__":
 
     handle = sys.argv[1]
 
-    key = SessionKey.make(
-        handle=handle,
-        campaign_name="test_message",
-        csv_path=INPUT_CSV_PATH,
-    )
+    key = SessionKey.make(handle=handle, campaign_name="test_message", csv_path=None)
 
     session, _ = AccountSessionRegistry.get_or_create_from_path(
         handle=handle,
         campaign_name="test_message",
-        csv_path=INPUT_CSV_PATH,
+        csv_path=None,
     )
     session.ensure_browser()
 

@@ -14,9 +14,7 @@ Primary goals:
 
 ## 0) Current `linkedin/` architecture (what exists today)
 
-### Data ingestion / orchestration
-- `linkedin/csv_launcher.py`
-  - Loads CSV (currently via `pandas`), dedupes, derives `public_identifier`, sorts by DB `updated_at`.
+### Orchestration
 - `linkedin/campaigns/connect_follow_up.py`
   - A single campaign state machine: `DISCOVERED → ENRICHED → PENDING/CONNECTED → COMPLETED`
   - Uses actions: `profile.scrape_profile`, `connect.send_connection_request`, `message.send_follow_up_message`.
@@ -68,8 +66,8 @@ Primary goals:
   - Remove `template_file` + `template_type` args.
   - Require `message: str` (or allow `None` and return SKIPPED with a clear log).
 - Update `linkedin/campaigns/connect_follow_up.py`
-  - Remove template constants.
-  - Use CSV-provided message if running from CSV, otherwise accept message passed in at runtime (future API job).
+  - Remove template constants and CSV handling.
+  - Accept message passed in at runtime (API job).
 
 ### 1.3 Dependency cleanup
 - Remove from `pyproject.toml`:
@@ -200,22 +198,6 @@ Implementation approach:
   - Send, then confirm success toast
 - Return explicit error reasons:
   - `NOT_AVAILABLE`, `NO_CREDITS`, `UI_CHANGED`, `BLOCKED`
-
----
-
-## 6) Phase 6 — CSV support becomes an API feature (optional)
-
-Instead of a local script:
-- `POST /imports/csv` upload a CSV
-- Server parses rows into touchpoint requests and enqueues a run.
-
-Prefer standard library CSV:
-- accept columns like:
-  - `url`
-  - `connect_note`
-  - `followup_message`
-  - `post_url`, `reaction`, `comment`
-  - `visit_duration_s`
 
 ---
 

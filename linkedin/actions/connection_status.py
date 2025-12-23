@@ -6,13 +6,14 @@ from linkedin.actions.search import search_profile
 from linkedin.navigation.enums import ProfileState
 from linkedin.navigation.utils import get_top_card
 from linkedin.sessions.registry import AccountSessionRegistry
+from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 
 
 def get_connection_status(
-        session: "AccountSession",
-        profile: Dict[str, Any],
+    session: AccountSession,
+    profile: Dict[str, Any],
 ) -> ProfileState:
     """
     Reliably detects connection status using UI inspection.
@@ -32,7 +33,10 @@ def get_connection_status(
         logger.debug("API reports 1st degree → instantly trusted as CONNECTED")
         return ProfileState.CONNECTED
 
-    logger.debug("connection_degree=%s → API unreliable, switching to UI inspection", degree or "None")
+    logger.debug(
+        "connection_degree=%s → API unreliable, switching to UI inspection",
+        degree or "None",
+    )
 
     top_card = get_top_card(session)
 
@@ -53,7 +57,9 @@ def get_connection_status(
         return ProfileState.CONNECTED
 
     # 3a. Connect button visible?
-    invite_btn = top_card.locator('button[aria-label*="Invite"][aria-label*="to connect"]:visible')
+    invite_btn = top_card.locator(
+        'button[aria-label*="Invite"][aria-label*="to connect"]:visible'
+    )
     if invite_btn.count() > 0:
         logger.debug("Found 'Connect' button → NOT_CONNECTED")
         return ProfileState.ENRICHED
@@ -77,7 +83,6 @@ if __name__ == "__main__":
     import sys
     import logging
     from linkedin.sessions.registry import SessionKey
-    from linkedin.campaigns.connect_follow_up import INPUT_CSV_PATH
 
     logging.basicConfig(
         level=logging.DEBUG,
@@ -92,7 +97,7 @@ if __name__ == "__main__":
     key = SessionKey.make(
         handle=handle,
         campaign_name="test_status",
-        csv_path=INPUT_CSV_PATH,
+        csv_path=None,
     )
 
     public_identifier = "benjames01"
@@ -109,7 +114,7 @@ if __name__ == "__main__":
     session, _ = AccountSessionRegistry.get_or_create_from_path(
         handle=key.handle,
         campaign_name=key.campaign_name,
-        csv_path=INPUT_CSV_PATH,
+        csv_path=None,
     )
 
     # Check status

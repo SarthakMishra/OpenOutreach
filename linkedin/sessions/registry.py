@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from pathlib import Path  # noqa
+from pathlib import Path
 from typing import Optional, NamedTuple
+from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 
@@ -14,12 +15,13 @@ class AccountSessionRegistry:
 
     @classmethod
     def get_or_create(
-            cls,
-            handle: str,
-            campaign_name: str,
-            csv_hash: str,
+        cls,
+        handle: str,
+        campaign_name: str,
+        csv_hash: str,
     ) -> "AccountSession":
         from .account import AccountSession
+
         key = SessionKey(handle, campaign_name, csv_hash)
 
         if key not in cls._instances:
@@ -32,10 +34,10 @@ class AccountSessionRegistry:
 
     @classmethod
     def get_or_create_from_path(
-            cls,
-            handle: str,
-            campaign_name: str,
-            csv_path: Path | str,
+        cls,
+        handle: str,
+        campaign_name: str,
+        csv_path: Path | str,
     ) -> "AccountSession":
         csv_path = Path(csv_path)
         key = SessionKey.make(handle, campaign_name, csv_path)
@@ -61,22 +63,38 @@ class SessionKey(NamedTuple):
         return f"{self.handle}::{self.campaign_name}::{self.csv_hash}"
 
     @classmethod
-    def make(cls, handle: str, campaign_name: str, csv_path: Path | str) -> "SessionKey":
-        csv_hash = hash_file(csv_path)
+    def make(
+        cls, handle: str, campaign_name: str, csv_path: Path | str | None = None
+    ) -> "SessionKey":
+        """
+        Build a SessionKey. If csv_path is missing or unreadable, fall back to a stable
+        placeholder hash for API-driven runs (no CSV input).
+        """
+        if csv_path is None:
+            csv_hash = "api-input"
+        else:
+            try:
+                csv_hash = hash_file(csv_path)
+            except FileNotFoundError:
+                csv_hash = "api-input"
         return cls(handle=handle, campaign_name=campaign_name, csv_hash=csv_hash)
 
     def as_filename_safe(self) -> str:
         return f"{self.handle}--{self.campaign_name}--{self.csv_hash}"
 
 
-def hash_file(path: Path | str, chunk_size: int = 8192, algorithm: str = "sha256") -> str:
+def hash_file(
+    path: Path | str, chunk_size: int = 8192, algorithm: str = "sha256"
+) -> str:
     """
     Compute a stable cryptographic hash of a file's contents.
     Used to detect if the input CSV has changed → new campaign run.
     """
     path = Path(path)
     if not path.is_file():
-        raise FileNotFoundError(f"Cannot hash file: {path} does not exist or is not a file")
+        raise FileNotFoundError(
+            f"Cannot hash file: {path} does not exist or is not a file"
+        )
 
     hasher = hashlib.new(algorithm)
 
@@ -111,12 +129,10 @@ if __name__ == "__main__":
     handle = sys.argv[1]
 
     CAMPAIGN_NAME = "connect_follow_up"
-    INPUT_CSV_PATH = Path("./assets/inputs/urls.csv")
-
     session, _ = AccountSessionRegistry.get_or_create_from_path(
         handle=handle,
         campaign_name=CAMPAIGN_NAME,
-        csv_path=INPUT_CSV_PATH,
+        csv_path=None,
     )
 
     session.ensure_browser()  # ← this does everything
@@ -124,7 +140,7 @@ if __name__ == "__main__":
     print("\nSession ready! Use session.page, session.context, etc.")
     print(f"   Handle   : {session.handle}")
     print(f"   Campaign : {session.campaign_name}")
-    print(f"   CSV hash : {session.csv_hash}")
+    print(f"   Input hash : {session.csv_hash}")
     print(f"   Key      : {session.key}")
     print("   Browser survives crash/reboot/Ctrl+C\n")
 

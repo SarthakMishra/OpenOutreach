@@ -29,12 +29,16 @@ def scrape_profile(key: SessionKey, profile: dict):
     logger.info("Enriching profile → %s", url)
     profile, data = api.get_profile(profile_url=url)
 
-    logger.info("Profile enriched – %s", profile.get("public_identifier")) if profile else None
+    logger.info(
+        "Profile enriched – %s", profile.get("public_identifier")
+    ) if profile else None
 
     return profile, data
 
 
-def _save_profile_to_fixture(enriched_profile: Dict[str, Any], path: str | Path) -> None:
+def _save_profile_to_fixture(
+    enriched_profile: Dict[str, Any], path: str | Path
+) -> None:
     """Utility to save enriched profile as test fixture."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -45,14 +49,13 @@ def _save_profile_to_fixture(enriched_profile: Dict[str, Any], path: str | Path)
 
 if __name__ == "__main__":
     import sys
-    from linkedin.campaigns.connect_follow_up import INPUT_CSV_PATH
 
     FIXTURE_PATH = FIXTURE_PROFILES_DIR / "linkedin_profile.json"
 
     logging.getLogger().handlers.clear()
     logging.basicConfig(
         level=logging.DEBUG,
-        format='%(asctime)s │ %(levelname)-8s │ %(message)s',
+        format="%(asctime)s │ %(levelname)-8s │ %(message)s",
         datefmt="%H:%M:%S",
     )
 
@@ -65,7 +68,7 @@ if __name__ == "__main__":
     key = SessionKey.make(
         handle=handle,
         campaign_name="test_profile",
-        csv_path=INPUT_CSV_PATH,
+        csv_path=None,
     )
 
     test_profile = {

@@ -6,6 +6,7 @@ from urllib.parse import urlparse, parse_qs, urlencode
 
 from linkedin.navigation.utils import goto_page
 from linkedin.sessions.registry import AccountSessionRegistry
+from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ def _go_to_profile(session: "AccountSession", url: str, public_identifier: str):
         session,
         action=lambda: session.page.goto(url),
         expected_url_pattern=f"/in/{public_identifier}",
-        error_message="Failed to navigate to the target profile"
+        error_message="Failed to navigate to the target profile",
     )
 
 
@@ -44,9 +45,11 @@ def _initiate_search(session: "AccountSession", full_name: str):
     if "feed/" not in page.url:
         goto_page(
             session,
-            action=lambda: page.goto("https://www.linkedin.com/feed/?doFeedRefresh=true&nis=true"),
+            action=lambda: page.goto(
+                "https://www.linkedin.com/feed/?doFeedRefresh=true&nis=true"
+            ),
             expected_url_pattern="feed/",
-            error_message="Failed to reach LinkedIn feed"
+            error_message="Failed to reach LinkedIn feed",
         )
 
     search_bar = page.locator("//input[contains(@placeholder, 'Search')]")
@@ -57,20 +60,22 @@ def _initiate_search(session: "AccountSession", full_name: str):
         session,
         action=lambda: search_bar.press("Enter"),
         expected_url_pattern="/search/results/",
-        error_message="Failed to reach search results"
+        error_message="Failed to reach search results",
     )
 
     current = urlparse(page.url)
     new_path = "/search/results/people/" if "/all/" in current.path else current.path
     params = parse_qs(current.query)
     params["page"] = ["1"]
-    new_url = current._replace(path=new_path, query=urlencode(params, doseq=True)).geturl()
+    new_url = current._replace(
+        path=new_path, query=urlencode(params, doseq=True)
+    ).geturl()
 
     goto_page(
         session,
         action=lambda: page.goto(new_url),
         expected_url_pattern="/search/results/people/",
-        error_message="Failed to switch to People tab"
+        error_message="Failed to switch to People tab",
     )
 
 
@@ -86,7 +91,7 @@ def _paginate_to_next_page(session: "AccountSession", page_num: int):
         session,
         action=lambda: page.goto(new_url),
         expected_url_pattern="/search/results/",
-        error_message="Pagination failed"
+        error_message="Pagination failed",
     )
 
 
@@ -149,11 +154,10 @@ def _simulate_human_search(session: "AccountSession", profile: Dict[str, Any]) -
 # ——————————————————————————————————————————————————————————————
 if __name__ == "__main__":
     import sys
-    from linkedin.campaigns.connect_follow_up import INPUT_CSV_PATH
 
     logging.basicConfig(
         level=logging.DEBUG,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     if len(sys.argv) != 2:
@@ -165,7 +169,7 @@ if __name__ == "__main__":
     session, _ = AccountSessionRegistry.get_or_create_from_path(
         handle=handle,
         campaign_name="test_search",
-        csv_path=INPUT_CSV_PATH,
+        csv_path=None,
     )
 
     # Make sure browser is up

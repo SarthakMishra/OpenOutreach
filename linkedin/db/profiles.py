@@ -1,15 +1,14 @@
 # linkedin/db/profiles.py
 import json
 import logging
-from typing import Dict, Any, Optional
-from typing import List
+from typing import Dict, Any, Optional, List
 from urllib.parse import urlparse, unquote
 
-import pandas as pd
 from sqlalchemy import func
 
 from linkedin.db.models import Profile
 from linkedin.navigation.enums import ProfileState
+from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 
@@ -24,21 +23,17 @@ def add_profile_urls(session: "AccountSession", urls: List[str]):
 
     db = session.db_session
     to_insert = [{"public_identifier": pid} for pid in public_ids]
-    db.execute(
-        Profile.__table__.insert()
-        .prefix_with("OR IGNORE")
-        .values(to_insert)
-    )
+    db.execute(Profile.__table__.insert().prefix_with("OR IGNORE").values(to_insert))
     db.commit()
 
     logger.debug(f"Discovered {len(public_ids)} unique LinkedIn profiles")
 
 
 def save_scraped_profile(
-        session: "AccountSession",
-        url: str,
-        profile: Dict[str, Any],
-        data: Optional[Dict[str, Any]] = None,
+    session: "AccountSession",
+    url: str,
+    profile: Dict[str, Any],
+    data: Optional[Dict[str, Any]] = None,
 ):
     public_id = url_to_public_id(url)
     if not public_id:
@@ -72,19 +67,21 @@ def save_scraped_profile(
 
 
 def get_next_url_to_scrape(session: "AccountSession", limit: int = 1) -> List[str]:
-    rows = (session.db_session
-            .query(Profile.public_identifier)
-            .filter(Profile.state == ProfileState.DISCOVERED.value)
-            .limit(limit)
-            .all())
+    rows = (
+        session.db_session.query(Profile.public_identifier)
+        .filter(Profile.state == ProfileState.DISCOVERED.value)
+        .limit(limit)
+        .all()
+    )
     return [public_id_to_url(row.public_identifier) for row in rows]
 
 
 def count_pending_scrape(session: "AccountSession") -> int:
-    return (session.db_session
-            .query(Profile)
-            .filter(Profile.state == ProfileState.DISCOVERED.value)
-            .count())
+    return (
+        session.db_session.query(Profile)
+        .filter(Profile.state == ProfileState.DISCOVERED.value)
+        .count()
+    )
 
 
 def url_to_public_id(url: str) -> str:
@@ -128,10 +125,11 @@ def get_profile_from_url(session: "AccountSession", url: str):
 
 
 def get_profile(session: "AccountSession", public_identifier: str) -> Any:
-    return session.db_session \
-        .query(Profile) \
-        .filter_by(public_identifier=public_identifier) \
+    return (
+        session.db_session.query(Profile)
+        .filter_by(public_identifier=public_identifier)
         .first()
+    )
 
 
 def set_profile_state(session: "AccountSession", public_identifier, new_state: str):
@@ -164,29 +162,4 @@ def set_profile_state(session: "AccountSession", public_identifier, new_state: s
 def debug_profile_preview(enriched):
     pretty = json.dumps(enriched, indent=2, ensure_ascii=False, default=str)
     preview_lines = pretty.splitlines()[:3]
-    logger.debug("=== ENRICHED PROFILE PREVIEW ===\n%s\n...", '\n'.join(preview_lines))
-
-
-def get_updated_at_df(session: "AccountSession", public_identifiers: List[str]) -> pd.DataFrame:
-    """
-    Return a DataFrame with public_identifier and updated_at for existing profiles.
-    """
-    if not public_identifiers:
-        return pd.DataFrame(columns=["public_identifier", "updated_at"])
-
-    db = session.db_session
-
-    results = (
-        db.query(Profile.public_identifier, Profile.updated_at)
-        .filter(Profile.public_identifier.in_(public_identifiers))
-        .all()
-    )
-
-    if not results:
-        return pd.DataFrame(columns=["public_identifier", "updated_at"])
-
-    df = pd.DataFrame(results, columns=["public_identifier", "updated_at"])
-
-    logger.debug(f"Retrieved updated_at for {len(df)} profiles from DB")
-
-    return df
+    logger.debug("=== ENRICHED PROFILE PREVIEW ===\n%s\n...", "\n".join(preview_lines))

@@ -71,20 +71,20 @@ source venv/bin/activate
 ```
 
 ### 3. Install Dependencies
-We use `uv` for fast dependency management, which will be installed first.
+We use `uv` for dependency management.
 ```bash
-# Install uv
+# Install uv (if not installed)
 pip install uv
 
-# Install project dependencies
-uv pip install -r requirements/local.txt
+# Install project dependencies (from pyproject.toml)
+uv sync
 
 # Install required browser assets
 playwright install --with-deps chromium
 ```
 
 ### 4. Configure the Application
-You need to provide your LinkedIn credentials and target profiles.
+You need to provide your LinkedIn credentials.
 
 1. **Configure LinkedIn accounts**
    ```bash
@@ -92,12 +92,9 @@ You need to provide your LinkedIn credentials and target profiles.
    ```
    Edit `assets/accounts.secrets.yaml` with your credentials.
 
-2. **Add target profiles**  
-   Paste LinkedIn profile URLs into `assets/inputs/urls.csv`.
-
 ### 5. Run the Application
 
-You can run the main script directly:
+You can run the main script directly (API-driven workflows are the new focus):
 ```bash
 python main.py
 ```
@@ -122,7 +119,7 @@ For full instructions, please see the **[Docker Installation Guide](./docs/docke
 | 💾 **Persistent Local Database**   | Full data ownership via dedicated SQLite DB per account.                                                             |
 | 🐳 **Containerized Setup**         | One-command Docker + Make deployment.                                                                                |
 | 🖥️ **Visual Debugging**           | Real-time browser view via built-in VNC server (`localhost:5900`).                                                   |
-| ✍️ **AI-Ready Templating**         | Jinja or AI-prompt templates for hyper-personalized messages (easy GPT integration).                                 |
+| ✍️ **API-Driven Messaging**        | Explicit message text supplied by clients; no templating/AI generation in this repo.                                 |
 
 ---
 
@@ -196,8 +193,7 @@ Your input CSV can contain extra columns beyond `url`. Two columns are recognize
 ```
 ├── assets/
 │   ├── accounts.secrets.yaml      # LinkedIn credentials
-│   └── inputs/
-│       └── urls.csv               # Target profiles
+│   └── inputs/                    # (CSV input removed in this API-focused version)
 ├── docs/
 │   ├── docker.md                  # NEW: Docker setup guide
 │   └── ...

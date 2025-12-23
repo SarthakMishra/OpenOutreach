@@ -181,14 +181,13 @@ def _perform_send_invitation_with_note(session, message: str):
 if __name__ == "__main__":
     import sys
     from linkedin.sessions.registry import SessionKey
-    from linkedin.campaigns.connect_follow_up import INPUT_CSV_PATH
 
     if len(sys.argv) != 2:
         print("Usage: python -m linkedin.actions.connect <handle>")
         sys.exit(1)
 
     handle = sys.argv[1]
-    key = SessionKey.make(handle, "test_connect", INPUT_CSV_PATH)
+    key = SessionKey.make(handle, "test_connect", csv_path=None)
 
     logging.basicConfig(
         level=logging.DEBUG,

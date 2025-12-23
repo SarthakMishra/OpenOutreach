@@ -1,6 +1,5 @@
 # campaigns/connect_follow_up.py
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from linkedin.actions.connection_status import get_connection_status
@@ -22,16 +21,6 @@ logger = logging.getLogger(__name__)
 
 # ———————————————————————————————— USER CONFIGURATION ————————————————————————————————
 CAMPAIGN_NAME = "connect_follow_up"
-INPUT_CSV_PATH = Path("./assets/inputs/urls.csv")
-
-# ———————————————————————————————— CSV Overrides (no-AI path) ————————————————————————————————
-# If these columns exist in your input CSV, the campaign can use them directly.
-#
-# - followup_message: exact DM text to send once connected (bypasses templates/AI)
-# - connect_note: optional connection note to send with the invite (off by default)
-FOLLOWUP_MESSAGE_CSV_COLUMN = "followup_message"
-CONNECT_NOTE_CSV_COLUMN = "connect_note"
-SEND_CONNECT_NOTE = False  # set True to enable sending the CSV connect_note
 
 message_status_to_state = {
     MessageStatus.SENT: ProfileState.COMPLETED,
@@ -52,8 +41,7 @@ def process_profile_row(
 
     url = profile["url"]
     public_identifier = profile["public_identifier"]
-    csv_followup_message = profile.get(FOLLOWUP_MESSAGE_CSV_COLUMN)
-    csv_connect_note = profile.get(CONNECT_NOTE_CSV_COLUMN)
+    followup_message = profile.get("message") or profile.get("followup_message")
     profile_row = get_profile(session, public_identifier)
 
     if profile_row:
@@ -75,20 +63,14 @@ def process_profile_row(
             if enriched_profile is None:
                 new_state = ProfileState.FAILED
             else:
-                # Preserve campaign-specific CSV fields across enrichment
-                if csv_followup_message is not None:
-                    enriched_profile[FOLLOWUP_MESSAGE_CSV_COLUMN] = csv_followup_message
-                if csv_connect_note is not None:
-                    enriched_profile[CONNECT_NOTE_CSV_COLUMN] = csv_connect_note
                 new_state = ProfileState.ENRICHED
                 save_scraped_profile(session, url, enriched_profile, data)
 
         case ProfileState.ENRICHED:
             if not perform_connections:
                 return None
-            note = csv_connect_note if SEND_CONNECT_NOTE else None
             new_state = send_connection_request(
-                key=key, profile=enriched_profile, note=note
+                key=key, profile=enriched_profile, note=None
             )
             enriched_profile = (
                 None if new_state != ProfileState.CONNECTED else enriched_profile
@@ -99,12 +81,12 @@ def process_profile_row(
                 None if new_state != ProfileState.CONNECTED else enriched_profile
             )
         case ProfileState.CONNECTED:
-            # Use CSV-provided follow-up message if available; otherwise skip messaging.
-            if isinstance(csv_followup_message, str) and csv_followup_message.strip():
+            # Use provided follow-up message if available; otherwise skip messaging.
+            if isinstance(followup_message, str) and followup_message.strip():
                 status = send_follow_up_message(
                     key=key,
                     profile=enriched_profile,
-                    message=csv_followup_message.strip(),
+                    message=followup_message.strip(),
                 )
             else:
                 logger.info(
