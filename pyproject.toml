@@ -5,12 +5,15 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "apscheduler>=3.11.2",
+    "fastapi>=0.127.0",
     "jsonpath-ng>=1.7.0",
     "playwright>=1.57.0",
     "playwright-stealth>=2.0.0",
     "pydantic>=2.12.5",
     "python-dotenv>=1.2.1",
     "sqlalchemy>=2.0.45",
+    "uvicorn>=0.40.0",
 ]
 
 [dependency-groups]
@@ -53,10 +56,3 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
 ignore = ["E203", "E501"]
-
-[tool.ty.rules]
-invalid-argument-type = "warn"
-possibly-unresolved-reference = "warn"
-possibly-missing-import = "warn"
-redundant-cast = "ignore"
-index-out-of-bounds = "ignore"
