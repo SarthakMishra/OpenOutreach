@@ -122,9 +122,6 @@ def _click_without_note(session):
     return True
 
 
-# ===================================================================
-# FUTURE: Send with personalized note (just uncomment when ready)
-# ===================================================================
 def _perform_send_invitation_with_note(session, message: str):
     """Full flow with custom note – ready to enable anytime."""
     session.wait()
