@@ -17,7 +17,6 @@ def scrape_profile(key: SessionKey, profile: dict):
 
     session = AccountSessionRegistry.get_or_create(
         handle=key.handle,
-        campaign_name=key.campaign_name,
         run_id=key.run_id,
     )
 
@@ -63,14 +62,14 @@ if __name__ == "__main__":
     )
 
     if len(sys.argv) != 2:
-        print("Usage: python -m linkedin.actions.profile <handle>")
+        logger.error("Usage: python -m linkedin.actions.profile <handle>")
         sys.exit(1)
 
     import uuid
 
     handle = sys.argv[1]
     run_id = str(uuid.uuid4())
-    key = SessionKey(handle=handle, campaign_name="test_profile", run_id=run_id)
+    key = SessionKey(handle=handle, run_id=run_id)
 
     test_profile = {
         "url": "https://www.linkedin.com/in/lexfridman/",
@@ -79,4 +78,4 @@ if __name__ == "__main__":
     profile, data = scrape_profile(key, test_profile)
 
     _save_profile_to_fixture(data, FIXTURE_PATH)
-    print(f"Fixture saved → {FIXTURE_PATH}")
+    logger.info("Fixture saved → %s", FIXTURE_PATH)

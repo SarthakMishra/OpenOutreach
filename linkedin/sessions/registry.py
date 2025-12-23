@@ -16,12 +16,11 @@ class AccountSessionRegistry:
     def get_or_create(
         cls,
         handle: str,
-        campaign_name: str,
         run_id: str,
     ) -> "AccountSession":
         from .account import AccountSession
 
-        key = SessionKey(handle, campaign_name, run_id)
+        key = SessionKey(handle, run_id)
 
         if key not in cls._instances:
             cls._instances[key] = AccountSession(key)
@@ -35,12 +34,11 @@ class AccountSessionRegistry:
     def get_or_create_for_run(
         cls,
         handle: str,
-        campaign_name: str,
         run_id: str,
     ) -> tuple["AccountSession", "SessionKey"]:
         """Convenience method that returns both session and key."""
-        session = cls.get_or_create(handle, campaign_name, run_id)
-        key = SessionKey(handle=handle, campaign_name=campaign_name, run_id=run_id)
+        session = cls.get_or_create(handle, run_id)
+        key = SessionKey(handle=handle, run_id=run_id)
         return session, key
 
     @classmethod
@@ -56,14 +54,13 @@ class AccountSessionRegistry:
 
 class SessionKey(NamedTuple):
     handle: str
-    campaign_name: str
     run_id: str
 
     def __str__(self) -> str:
-        return f"{self.handle}::{self.campaign_name}::{self.run_id}"
+        return f"{self.handle}::{self.run_id}"
 
     def as_filename_safe(self) -> str:
-        return f"{self.handle}--{self.campaign_name}--{self.run_id}"
+        return f"{self.handle}--{self.run_id}"
 
 
 # ——————————————————————————————————————————————————————————————
@@ -80,29 +77,25 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) != 2:
-        print("Usage: python -m linkedin.sessions.registry <handle>")
+        logger.error("Usage: python -m linkedin.sessions.registry <handle>")
         sys.exit(1)
 
     import uuid
 
     handle = sys.argv[1]
-
-    CAMPAIGN_NAME = "connect_follow_up"
     run_id = str(uuid.uuid4())
     session, _ = AccountSessionRegistry.get_or_create_for_run(
         handle=handle,
-        campaign_name=CAMPAIGN_NAME,
         run_id=run_id,
     )
 
     session.ensure_browser()  # ← this does everything
 
-    print("\nSession ready! Use session.page, session.context, etc.")
-    print(f"   Handle   : {session.handle}")
-    print(f"   Campaign : {session.campaign_name}")
-    print(f"   Run ID   : {session.run_id}")
-    print(f"   Key      : {session.key}")
-    print("   Browser survives crash/reboot/Ctrl+C\n")
+    logger.info("\nSession ready! Use session.page, session.context, etc.")
+    logger.info("   Handle   : %s", session.handle)
+    logger.info("   Run ID   : %s", session.run_id)
+    logger.info("   Key      : %s", session.key)
+    logger.info("   Browser survives crash/reboot/Ctrl+C\n")
 
     assert session.page is not None, "page must be initialized via ensure_browser()"
     session.page.pause()  # keeps browser open for manual testing

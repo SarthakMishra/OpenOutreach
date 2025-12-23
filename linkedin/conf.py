@@ -1,6 +1,7 @@
 # linkedin/conf.py
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -9,6 +10,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from linkedin.db.models import Account
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -71,12 +74,7 @@ def list_active_accounts() -> List[str]:
     """Return list of active account handles from the accounts DB."""
     session = _get_accounts_session()
     try:
-        rows = (
-            session.query(Account)
-            .filter_by(active=True)
-            .order_by(Account.handle.asc())
-            .all()
-        )
+        rows = session.query(Account).filter_by(active=True).order_by(Account.handle.asc()).all()
         return [row.handle for row in rows]
     finally:
         session.close()
@@ -114,20 +112,25 @@ def _get_accounts_session():
 # Debug output when run directly
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
-    print("LinkedIn Automation – Active accounts (DB)")
-    print(f"Accounts DB : {ACCOUNTS_DB_PATH}")
-    print(f"Databases stored in: {DATA_DIR}")
-    print("-" * 60)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(message)s",
+    )
+
+    logger.info("LinkedIn Automation – Active accounts (DB)")
+    logger.info("Accounts DB : %s", ACCOUNTS_DB_PATH)
+    logger.info("Databases stored in: %s", DATA_DIR)
+    logger.info("-" * 60)
 
     active_handles = list_active_accounts()
     if not active_handles:
-        print("No active accounts found.")
+        logger.info("No active accounts found.")
     else:
         for handle in active_handles:
             cfg = get_account_config(handle)
             status = "ACTIVE" if cfg["active"] else "inactive"
-            print(f"{status} • {handle.ljust(20)}  →  DB: {cfg['db_path'].name}")
+            logger.info("%s • %s  →  DB: %s", status, handle.ljust(20), cfg["db_path"].name)
 
-        print("-" * 60)
+        logger.info("-" * 60)
         first = get_first_active_account()
-        print(f"First active account → {first or 'None'}")
+        logger.info("First active account → %s", first or "None")

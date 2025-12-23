@@ -164,7 +164,7 @@ if __name__ == "__main__":
     )
 
     if len(sys.argv) != 2:
-        print("Usage: python -m linkedin.actions.search <handle>")
+        logger.error("Usage: python -m linkedin.actions.search <handle>")
         sys.exit(1)
 
     import uuid
@@ -174,7 +174,6 @@ if __name__ == "__main__":
 
     session, _ = AccountSessionRegistry.get_or_create_for_run(
         handle=handle,
-        campaign_name="test_search",
         run_id=run_id,
     )
 

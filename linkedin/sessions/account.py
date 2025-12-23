@@ -38,7 +38,6 @@ class AccountSession:
 
         self.key = key
         self.handle = key.handle
-        self.campaign_name = key.campaign_name
         self.run_id = key.run_id
 
         self.account_cfg = get_account_config(self.handle)
@@ -55,9 +54,9 @@ class AccountSession:
         """Launch or recover browser + login if needed. Call before using .page"""
         if not self.page or self.page.is_closed():
             logger.info(
-                "Launching/recovering browser for %s – %s",
+                "Launching/recovering browser for %s (run: %s)",
                 self.handle,
-                self.campaign_name,
+                self.run_id[:8],
             )
             init_playwright_session(session=self, handle=self.handle)
 

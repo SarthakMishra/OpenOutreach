@@ -89,14 +89,14 @@ if __name__ == "__main__":
     )
 
     if len(sys.argv) != 2:
-        print("Usage: python -m linkedin.actions.connections <handle>")
+        logger.error("Usage: python -m linkedin.actions.connections <handle>")
         sys.exit(1)
 
     import uuid
 
     handle = sys.argv[1]
     run_id = str(uuid.uuid4())
-    key = SessionKey(handle=handle, campaign_name="test_status", run_id=run_id)
+    key = SessionKey(handle=handle, run_id=run_id)
 
     public_identifier = "benjames01"
     test_profile = {
@@ -105,16 +105,15 @@ if __name__ == "__main__":
         "public_identifier": public_identifier,
     }
 
-    print(f"Checking connection status as @{handle} → {test_profile['full_name']}")
-    print(f"Session key: {key}")
+    logger.info("Checking connection status as @%s → %s", handle, test_profile['full_name'])
+    logger.info("Session key: %s", key)
 
     # Get session and navigate
     session, _ = AccountSessionRegistry.get_or_create_for_run(
         handle=key.handle,
-        campaign_name=key.campaign_name,
         run_id=run_id,
     )
 
     # Check status
     status = get_connection_status(session, test_profile)
-    print(f"Connection status → {status.value}")
+    logger.info("Connection status → %s", status.value)

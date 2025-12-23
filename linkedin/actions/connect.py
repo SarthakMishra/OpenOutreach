@@ -23,7 +23,6 @@ def send_connection_request(
 
     session = AccountSessionRegistry.get_or_create(
         handle=key.handle,
-        campaign_name=key.campaign_name,
         run_id=key.run_id,
     )
 
@@ -166,14 +165,14 @@ if __name__ == "__main__":
     from linkedin.sessions.registry import SessionKey
 
     if len(sys.argv) != 2:
-        print("Usage: python -m linkedin.actions.connect <handle>")
+        logger.error("Usage: python -m linkedin.actions.connect <handle>")
         sys.exit(1)
 
     import uuid
 
     handle = sys.argv[1]
     run_id = str(uuid.uuid4())
-    key = SessionKey(handle=handle, campaign_name="test_connect", run_id=run_id)
+    key = SessionKey(handle=handle, run_id=run_id)
 
     logging.basicConfig(
         level=logging.DEBUG,
@@ -187,10 +186,10 @@ if __name__ == "__main__":
         "public_identifier": public_identifier,
     }
 
-    print(f"Testing connection request as @{handle} (session: {key})")
+    logger.info("Testing connection request as @%s (session: %s)", handle, key)
     status = send_connection_request(
         key=key,
         profile=test_profile,
     )
 
-    print(f"Finished → Status: {status.value}")
+    logger.info("Finished → Status: %s", status.value)

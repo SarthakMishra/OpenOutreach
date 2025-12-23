@@ -103,24 +103,23 @@ if __name__ == "__main__":
     )
 
     if len(sys.argv) != 2:
-        print("Usage: python -m linkedin.navigation.login <handle>")
+        logger.error("Usage: python -m linkedin.navigation.login <handle>")
         sys.exit(1)
 
     import uuid
 
     handle = sys.argv[1]
     run_id = str(uuid.uuid4())
-    key = SessionKey(handle=handle, campaign_name="test_message", run_id=run_id)
+    key = SessionKey(handle=handle, run_id=run_id)
 
     session, _ = AccountSessionRegistry.get_or_create_for_run(
         handle=handle,
-        campaign_name="test_message",
         run_id=run_id,
     )
 
     session.ensure_browser()
 
     init_playwright_session(session=session, handle=handle)
-    print("Logged in! Close browser manually.")
+    logger.info("Logged in! Close browser manually.")
     assert session.page is not None, "page must be initialized via ensure_browser()"
     session.page.pause()
