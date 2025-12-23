@@ -1,17 +1,19 @@
 # linkedin/actions/visit.py
 import logging
 import time
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 from urllib.parse import urlparse
 
 from linkedin.navigation.utils import goto_page
-from linkedin.sessions.account import AccountSession
+
+if TYPE_CHECKING:
+    from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 
 
 def visit_profile(
-    session: AccountSession, profile: Dict[str, Any], duration_s: float = 5.0, scroll_depth: int = 3
+    session: "AccountSession", profile: Dict[str, Any], duration_s: float = 5.0, scroll_depth: int = 3
 ) -> bool:
     """
     Visit a LinkedIn profile and simulate human behavior.

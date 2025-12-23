@@ -1,12 +1,14 @@
 # linkedin/actions/message.py
 import logging
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from linkedin.actions.connection_status import get_connection_status
 from linkedin.navigation.enums import MessageStatus, ProfileState
 from linkedin.navigation.utils import goto_page
-from linkedin.sessions.account import AccountSession
 from linkedin.sessions.registry import AccountSessionRegistry, SessionKey
+
+if TYPE_CHECKING:
+    from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 

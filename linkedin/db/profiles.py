@@ -1,14 +1,16 @@
 # linkedin/db/profiles.py
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from urllib.parse import unquote, urlparse
 
 from sqlalchemy import func
 
 from linkedin.db.models import Profile
 from linkedin.navigation.enums import ProfileState
-from linkedin.sessions.account import AccountSession
+
+if TYPE_CHECKING:
+    from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 
@@ -77,11 +79,7 @@ def get_next_url_to_scrape(session: "AccountSession", limit: int = 1) -> List[st
 
 
 def count_pending_scrape(session: "AccountSession") -> int:
-    return (
-        session.db_session.query(Profile)
-        .filter(Profile.state == ProfileState.DISCOVERED.value)
-        .count()
-    )
+    return session.db_session.query(Profile).filter(Profile.state == ProfileState.DISCOVERED.value).count()
 
 
 def url_to_public_id(url: str) -> str:
@@ -125,11 +123,7 @@ def get_profile_from_url(session: "AccountSession", url: str):
 
 
 def get_profile(session: "AccountSession", public_identifier: str) -> Any:
-    return (
-        session.db_session.query(Profile)
-        .filter_by(public_identifier=public_identifier)
-        .first()
-    )
+    return session.db_session.query(Profile).filter_by(public_identifier=public_identifier).first()
 
 
 def set_profile_state(session: "AccountSession", public_identifier, new_state: str):

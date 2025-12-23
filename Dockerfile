@@ -14,9 +14,10 @@ ARG BUILD_ENV=production
 # Install uv using pip (since the base has pip)
 RUN pip install uv
 
-# Copy requirements folder and install the dependencies based on BUILD_ENV using uv
-COPY ./requirements /requirements
-RUN uv pip install --system -r /requirements/${BUILD_ENV}.txt
+# Copy pyproject.toml first for dependency resolution
+COPY pyproject.toml ./
+
+RUN uv pip install --system .
 
 # Install Playwright browsers
 RUN playwright install --with-deps chromium

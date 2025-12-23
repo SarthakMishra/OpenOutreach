@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import logging
-from typing import NamedTuple, Optional
+from typing import TYPE_CHECKING, NamedTuple, Optional
 
-from linkedin.sessions.account import AccountSession
+if TYPE_CHECKING:
+    from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 

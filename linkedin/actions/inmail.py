@@ -2,9 +2,12 @@
 import logging
 import re
 import time
+from typing import TYPE_CHECKING
 
 from linkedin.navigation.utils import goto_page
-from linkedin.sessions.account import AccountSession
+
+if TYPE_CHECKING:
+    from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +96,7 @@ def _check_inmail_credits(page) -> tuple[bool, str | None]:
         return False, None
 
 
-def send_inmail(session: AccountSession, profile_url: str, subject: str | None, body: str) -> tuple[bool, str | None]:
+def send_inmail(session: "AccountSession", profile_url: str, subject: str | None, body: str) -> tuple[bool, str | None]:
     """
     Send an InMail to a LinkedIn profile.
 

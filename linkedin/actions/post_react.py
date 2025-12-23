@@ -1,9 +1,12 @@
 # linkedin/actions/post_react.py
 import logging
 import time
+from typing import TYPE_CHECKING
 
 from linkedin.navigation.utils import goto_page
-from linkedin.sessions.account import AccountSession
+
+if TYPE_CHECKING:
+    from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +24,7 @@ REACTION_LABELS = {
 }
 
 
-def react_to_post(session: AccountSession, post_url: str, reaction: str) -> bool:
+def react_to_post(session: "AccountSession", post_url: str, reaction: str) -> bool:
     """
     React to a LinkedIn post.
 

@@ -1,12 +1,14 @@
 # linkedin/actions/search.py
 
 import logging
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 from urllib.parse import parse_qs, urlencode, urlparse
 
 from linkedin.navigation.utils import goto_page
-from linkedin.sessions.account import AccountSession
 from linkedin.sessions.registry import AccountSessionRegistry
+
+if TYPE_CHECKING:
+    from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 

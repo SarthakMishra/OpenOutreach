@@ -1,14 +1,17 @@
 # linkedin/actions/post_comment.py
 import logging
 import time
+from typing import TYPE_CHECKING
 
 from linkedin.navigation.utils import goto_page
-from linkedin.sessions.account import AccountSession
+
+if TYPE_CHECKING:
+    from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 
 
-def comment_on_post(session: AccountSession, post_url: str, comment_text: str) -> bool:
+def comment_on_post(session: "AccountSession", post_url: str, comment_text: str) -> bool:
     """
     Comment on a LinkedIn post.
 

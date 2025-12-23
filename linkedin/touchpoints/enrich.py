@@ -8,7 +8,6 @@ from linkedin.actions.profile import scrape_profile
 
 if TYPE_CHECKING:
     from linkedin.sessions.account import AccountSession
-from linkedin.sessions.account import AccountSession
 from linkedin.sessions.registry import SessionKey
 from linkedin.touchpoints.base import Touchpoint
 from linkedin.touchpoints.models import ProfileEnrichInput

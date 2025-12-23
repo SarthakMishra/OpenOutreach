@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 
-from linkedin.sessions.account import AccountSession
+if TYPE_CHECKING:
+    from linkedin.sessions.account import AccountSession
 
 
 class Touchpoint(ABC):
@@ -16,7 +17,7 @@ class Touchpoint(ABC):
     """
 
     @abstractmethod
-    def execute(self, session: AccountSession) -> Dict[str, Any]:
+    def execute(self, session: "AccountSession") -> Dict[str, Any]:
         """
         Execute the touchpoint against an AccountSession.
 

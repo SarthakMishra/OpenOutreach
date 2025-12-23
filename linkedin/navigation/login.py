@@ -1,14 +1,17 @@
 # linkedin/navigation/login.py
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from playwright.sync_api import sync_playwright
 from playwright_stealth import Stealth
 
 from linkedin.conf import get_account_config
 from linkedin.navigation.utils import goto_page
-from linkedin.sessions.account import AccountSession
 from linkedin.sessions.registry import AccountSessionRegistry, SessionKey
+
+if TYPE_CHECKING:
+    from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 

@@ -1,12 +1,15 @@
 # linkedin/navigation/utils.py
 import logging
+from typing import TYPE_CHECKING
 from urllib.parse import unquote, urljoin, urlparse
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from linkedin.conf import FIXTURE_PAGES_DIR, OPPORTUNISTIC_SCRAPING
 from linkedin.navigation.exceptions import SkipProfile
-from linkedin.sessions.account import AccountSession
+
+if TYPE_CHECKING:
+    from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 

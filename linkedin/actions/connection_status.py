@@ -1,18 +1,20 @@
 # linkedin/actions/connection_status.py
 import logging
-from typing import Any, Dict
+from typing import TYPE_CHECKING, Any, Dict
 
 from linkedin.actions.search import search_profile
 from linkedin.navigation.enums import ProfileState
 from linkedin.navigation.utils import get_top_card
-from linkedin.sessions.account import AccountSession
 from linkedin.sessions.registry import AccountSessionRegistry
+
+if TYPE_CHECKING:
+    from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 
 
 def get_connection_status(
-    session: AccountSession,
+    session: "AccountSession",
     profile: Dict[str, Any],
 ) -> ProfileState:
     """

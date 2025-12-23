@@ -1,12 +1,14 @@
 # linkedin/api/client.py
 import json
 import logging
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from linkedin.api.voyager import parse_linkedin_voyager_response
 from linkedin.db.profiles import url_to_public_id
 from linkedin.navigation.exceptions import AuthenticationError
-from linkedin.sessions.account import AccountSession
+
+if TYPE_CHECKING:
+    from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 
