@@ -7,8 +7,8 @@ from playwright_stealth import Stealth
 
 from linkedin.conf import get_account_config
 from linkedin.navigation.utils import goto_page
-from linkedin.sessions.registry import AccountSessionRegistry
 from linkedin.sessions.account import AccountSession
+from linkedin.sessions.registry import AccountSessionRegistry
 
 logger = logging.getLogger(__name__)
 

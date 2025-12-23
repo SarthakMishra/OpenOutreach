@@ -1,6 +1,6 @@
 # linkedin/db_models.py
 
-from sqlalchemy import Column, String, JSON, DateTime, Boolean, Integer
+from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 

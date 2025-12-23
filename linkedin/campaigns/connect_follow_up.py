@@ -3,13 +3,12 @@ import logging
 from typing import TYPE_CHECKING
 
 from linkedin.actions.connection_status import get_connection_status
-from linkedin.db.profiles import set_profile_state, get_profile, save_scraped_profile
-from linkedin.navigation.enums import MessageStatus
-from linkedin.navigation.enums import ProfileState
+from linkedin.db.profiles import get_profile, save_scraped_profile, set_profile_state
+from linkedin.navigation.enums import MessageStatus, ProfileState
 from linkedin.navigation.exceptions import (
-    TerminalStateError,
-    SkipProfile,
     ReachedConnectionLimit,
+    SkipProfile,
+    TerminalStateError,
 )
 from linkedin.navigation.utils import save_page
 from linkedin.sessions.registry import SessionKey

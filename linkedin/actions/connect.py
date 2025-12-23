@@ -1,9 +1,9 @@
 # linkedin/actions/connect.py
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 from linkedin.navigation.enums import ProfileState
-from linkedin.navigation.exceptions import SkipProfile, ReachedConnectionLimit
+from linkedin.navigation.exceptions import ReachedConnectionLimit, SkipProfile
 from linkedin.navigation.utils import get_top_card
 from linkedin.sessions.registry import AccountSessionRegistry, SessionKey
 
@@ -180,6 +180,7 @@ def _perform_send_invitation_with_note(session, message: str):
 
 if __name__ == "__main__":
     import sys
+
     from linkedin.sessions.registry import SessionKey
 
     if len(sys.argv) != 2:

@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 from linkedin.api.cloud_sync import sync_profiles
 from linkedin.conf import get_account_config

@@ -1,6 +1,6 @@
 # linkedin/navigation/utils.py
 import logging
-from urllib.parse import unquote, urlparse, urljoin
+from urllib.parse import unquote, urljoin, urlparse
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 

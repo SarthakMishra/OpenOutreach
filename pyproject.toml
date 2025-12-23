@@ -18,7 +18,9 @@ dev = [
   "factory-boy>=3.3.3",
   "pytest>=9.0.2",
   "pytest-mock>=3.15.1",
+  "ruff>=0.14.10",
   "taskipy>=1.14.1",
+  "ty>=0.0.5",
 ]
 production = []
 
@@ -41,3 +43,20 @@ build = "{compose} build"
 up = "{compose} up --build"
 view = "sh -c 'vinagre vnc://127.0.0.1:5900 > /dev/null 2>&1 &'"
 up_view = "{compose} up --build -d && sleep 3 && task view && {compose} logs -f app"
+lint = "uv run ruff check ."
+typecheck = "uv run ty check ."
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E203", "E501"]
+
+[tool.ty.rules]
+invalid-argument-type = "warn"
+possibly-unresolved-reference = "warn"
+possibly-missing-import = "warn"
+redundant-cast = "ignore"
+index-out-of-bounds = "ignore"

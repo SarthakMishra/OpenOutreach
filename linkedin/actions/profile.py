@@ -2,10 +2,11 @@
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
 from linkedin.conf import FIXTURE_PROFILES_DIR
 from linkedin.sessions.registry import AccountSessionRegistry, SessionKey
+
 from ..api.client import PlaywrightLinkedinAPI
 
 logger = logging.getLogger(__name__)

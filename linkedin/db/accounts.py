@@ -1,9 +1,9 @@
 # linkedin/db/accounts.py
 import logging
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 from linkedin.conf import ASSETS_DIR
 from linkedin.db.models import Account

@@ -4,7 +4,8 @@ from __future__ import annotations
 import hashlib
 import logging
 from pathlib import Path
-from typing import Optional, NamedTuple
+from typing import NamedTuple, Optional
+
 from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)

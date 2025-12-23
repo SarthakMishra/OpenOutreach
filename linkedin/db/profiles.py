@@ -1,8 +1,8 @@
 # linkedin/db/profiles.py
 import json
 import logging
-from typing import Dict, Any, Optional, List
-from urllib.parse import urlparse, unquote
+from typing import Any, Dict, List, Optional
+from urllib.parse import unquote, urlparse
 
 from sqlalchemy import func
 

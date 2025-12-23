@@ -1,8 +1,8 @@
 # linkedin/api/voyager.py
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from typing import List, Optional, Dict, Literal, Any
+from dataclasses import asdict, dataclass, field
+from typing import Any, Dict, List, Literal, Optional
 
 ConnectionDistance = Literal["DISTANCE_1", "DISTANCE_2", "DISTANCE_3", "OUT_OF_NETWORK", None]
 

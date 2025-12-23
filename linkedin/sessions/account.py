@@ -7,10 +7,10 @@ import time
 
 from linkedin.api.client import PlaywrightLinkedinAPI
 from linkedin.conf import (
-    get_account_config,
-    MIN_DELAY,
     MAX_DELAY,
+    MIN_DELAY,
     OPPORTUNISTIC_SCRAPING,
+    get_account_config,
 )
 from linkedin.navigation.login import init_playwright_session
 from linkedin.navigation.throttle import determine_batch_size

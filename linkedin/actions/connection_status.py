@@ -1,12 +1,12 @@
 # linkedin/actions/connection_status.py
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 from linkedin.actions.search import search_profile
 from linkedin.navigation.enums import ProfileState
 from linkedin.navigation.utils import get_top_card
-from linkedin.sessions.registry import AccountSessionRegistry
 from linkedin.sessions.account import AccountSession
+from linkedin.sessions.registry import AccountSessionRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -80,8 +80,9 @@ def get_connection_status(
 
 
 if __name__ == "__main__":
-    import sys
     import logging
+    import sys
+
     from linkedin.sessions.registry import SessionKey
 
     logging.basicConfig(

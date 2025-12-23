@@ -1,7 +1,7 @@
 # tests/conftest.py
 import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 from linkedin.db.models import Base
 

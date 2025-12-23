@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 from linkedin.db.models import Account
 
