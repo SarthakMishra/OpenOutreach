@@ -1,7 +1,6 @@
 # linkedin/conf.py
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Dict, Any, List
 
@@ -9,12 +8,6 @@ import yaml
 from dotenv import load_dotenv
 
 load_dotenv()
-
-# ----------------------------------------------------------------------
-# Global OpenAI config
-# ----------------------------------------------------------------------
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-AI_MODEL = os.getenv("AI_MODEL", "gpt-4o-mini")
 
 # ----------------------------------------------------------------------
 # Paths (all under assets/)
@@ -88,8 +81,7 @@ def get_account_config(handle: str) -> Dict[str, Any]:
 def list_active_accounts() -> List[str]:
     """Return list of active account handles (order preserved from YAML)."""
     return [
-        handle for handle, cfg in _accounts_config.items()
-        if cfg.get("active", True)
+        handle for handle, cfg in _accounts_config.items() if cfg.get("active", True)
     ]
 
 

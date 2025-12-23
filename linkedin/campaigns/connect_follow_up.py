@@ -24,11 +24,6 @@ logger = logging.getLogger(__name__)
 CAMPAIGN_NAME = "connect_follow_up"
 INPUT_CSV_PATH = Path("./assets/inputs/urls.csv")
 
-# ———————————————————————————————— Template Config ————————————————————————————————
-
-FOLLOWUP_TEMPLATE_FILE = "./assets/templates/prompts/followup.j2"
-FOLLOWUP_TEMPLATE_TYPE = "ai_prompt"
-
 # ———————————————————————————————— CSV Overrides (no-AI path) ————————————————————————————————
 # If these columns exist in your input CSV, the campaign can use them directly.
 #
@@ -104,7 +99,7 @@ def process_profile_row(
                 None if new_state != ProfileState.CONNECTED else enriched_profile
             )
         case ProfileState.CONNECTED:
-            # If CSV provides an explicit message, use it (bypasses templates/AI).
+            # Use CSV-provided follow-up message if available; otherwise skip messaging.
             if isinstance(csv_followup_message, str) and csv_followup_message.strip():
                 status = send_follow_up_message(
                     key=key,
@@ -112,12 +107,11 @@ def process_profile_row(
                     message=csv_followup_message.strip(),
                 )
             else:
-                status = send_follow_up_message(
-                    key=key,
-                    profile=enriched_profile,
-                    template_file=FOLLOWUP_TEMPLATE_FILE,
-                    template_type=FOLLOWUP_TEMPLATE_TYPE,
+                logger.info(
+                    "Message skipped → no follow-up message provided for %s",
+                    public_identifier,
                 )
+                status = MessageStatus.SKIPPED
             new_state = message_status_to_state.get(status, ProfileState.CONNECTED)
             enriched_profile = (
                 None if status != MessageStatus.SENT else enriched_profile

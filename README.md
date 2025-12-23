@@ -219,7 +219,6 @@ Your input CSV can contain extra columns beyond `url`. Two columns are recognize
 
 - [Docker Installation](./docs/docker.md)
 - [Configuration](./docs/configuration.md)
-- [Templating](./docs/templating.md)
 - [Testing Strategy](./docs/testing.md)
 
 ---

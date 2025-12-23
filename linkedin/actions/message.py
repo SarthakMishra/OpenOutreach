@@ -5,8 +5,8 @@ from typing import Dict, Any, Optional
 from linkedin.actions.connection_status import get_connection_status
 from linkedin.navigation.enums import ProfileState, MessageStatus
 from linkedin.navigation.utils import goto_page
+from linkedin.sessions.account import AccountSession
 from linkedin.sessions.registry import AccountSessionRegistry, SessionKey
-from linkedin.templates.renderer import render_template
 
 logger = logging.getLogger(__name__)
 
@@ -14,12 +14,10 @@ LINKEDIN_MESSAGING_URL = "https://www.linkedin.com/messaging/thread/new/"
 
 
 def send_follow_up_message(
-        key: SessionKey,
-        profile: Dict[str, Any],
-        *,
-        template_file: Optional[str] = None,
-        template_type: str = "jinja",
-        message: Optional[str] = None,
+    key: SessionKey,
+    profile: Dict[str, Any],
+    *,
+    message: Optional[str] = None,
 ):
     session = AccountSessionRegistry.get_or_create(
         handle=key.handle,
@@ -34,18 +32,23 @@ def send_follow_up_message(
     if status != ProfileState.CONNECTED:
         logger.info(f"Message skipped → not connected with {public_identifier}")
         return MessageStatus.SKIPPED
-    else:
-        if template_file:
-            message = render_template(session, template_file, template_type, profile)
 
-        s1 = _send_msg_pop_up(session, profile, message)
-        s2 = s1 or _send_message(session, profile, message)
-        success = s2
-        logger.info(f"Message sent: {message}") if success else None
-        return MessageStatus.SENT if success else MessageStatus.SKIPPED
+    if not (isinstance(message, str) and message.strip()):
+        logger.info("Message skipped → no message provided for %s", public_identifier)
+        return MessageStatus.SKIPPED
+
+    message = message.strip()
+
+    s1 = _send_msg_pop_up(session, profile, message)
+    s2 = s1 or _send_message(session, profile, message)
+    success = s2
+    logger.info(f"Message sent: {message}") if success else None
+    return MessageStatus.SENT if success else MessageStatus.SKIPPED
 
 
-def _send_msg_pop_up(session: "AccountSession", profile: Dict[str, Any], message: str) -> bool:
+def _send_msg_pop_up(
+    session: "AccountSession", profile: Dict[str, Any], message: str
+) -> bool:
     session.wait()
     page = session.page
     public_identifier = profile.get("public_identifier")
@@ -65,7 +68,9 @@ def _send_msg_pop_up(session: "AccountSession", profile: Dict[str, Any], message
 
         session.wait()
 
-        input_area = page.locator('div[class*="msg-form__contenteditable"]:visible').first
+        input_area = page.locator(
+            'div[class*="msg-form__contenteditable"]:visible'
+        ).first
 
         try:
             input_area.fill(message, timeout=10000)
@@ -73,12 +78,16 @@ def _send_msg_pop_up(session: "AccountSession", profile: Dict[str, Any], message
         except Exception:
             logger.debug("fill() failed → using clipboard paste")
             input_area.click()
-            page.evaluate(f"""() => navigator.clipboard.writeText(`{message.replace("`", "\\`")}`)""")
+            page.evaluate(
+                f"""() => navigator.clipboard.writeText(`{message.replace("`", "\\`")}`)"""
+            )
             session.wait()
             input_area.press("ControlOrMeta+V")
             session.wait()
 
-        send_btn = page.locator('button[type="submit"][class*="msg-form"]:visible').first
+        send_btn = page.locator(
+            'button[type="submit"][class*="msg-form"]:visible'
+        ).first
         send_btn.click(force=True)
         session.wait(4, 5)
 
@@ -104,17 +113,23 @@ def _send_message(session: "AccountSession", profile: Dict[str, Any], message: s
     )
     try:
         # Search person
-        session.page.locator('input[class^="msg-connections"]').type(full_name, delay=50)
+        session.page.locator('input[class^="msg-connections"]').type(
+            full_name, delay=50
+        )
         session.wait(0.5, 1)
 
-        item = session.page.locator('div[class*="msg-connections-typeahead__search-result-row"]').first
+        item = session.page.locator(
+            'div[class*="msg-connections-typeahead__search-result-row"]'
+        ).first
         session.wait(0.5, 1)
 
         # Scroll into view + click (very reliable on LinkedIn)
         item.scroll_into_view_if_needed()
         item.click(delay=200)  # small delay between mousedown/mouseup = very human
 
-        session.page.locator('div[class^="msg-form__contenteditable"]').type(message, delay=10)
+        session.page.locator('div[class^="msg-form__contenteditable"]').type(
+            message, delay=10
+        )
 
         session.page.locator('button[class^="msg-form__send-button"]').click(delay=200)
         session.wait(0.5, 1)
@@ -133,7 +148,7 @@ if __name__ == "__main__":
     logging.getLogger().handlers.clear()
     logging.basicConfig(
         level=logging.DEBUG,
-        format='%(asctime)s │ %(levelname)-8s │ %(message)s',
+        format="%(asctime)s │ %(levelname)-8s │ %(message)s",
         datefmt="%H:%M:%S",
     )
 
@@ -165,5 +180,5 @@ if __name__ == "__main__":
     send_follow_up_message(
         key=key,
         profile=test_profile,
-        template_file="./assets/templates/messages/followup.j2",
+        message="Hello from test script.",
     )

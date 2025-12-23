@@ -53,27 +53,6 @@ Primary goals:
 
 ---
 
-## 0.1) Known technical issues to fix during migration
-
-These will matter once we make the system long-running (server + scheduler):
-
-1. **Incorrect import in `AccountSession`**
-   - `linkedin/sessions/account.py` imports `PlaywrightLinkedinAPI` from the wrong place (currently `linkedin.actions.profile`).
-   - The class lives in `linkedin/api/client.py` (and is used correctly by `linkedin/actions/profile.py`).
-
-2. **Cloud sync module naming mismatch**
-   - `linkedin/db/engine.py` imports `linkedin.api.cloud_sync`, but `linkedin/api/` contains `logging.py` with `sync_profiles()`.
-   - This should be removed or renamed as part of “LinkedIn-only focus”.
-
-3. **`save_page()` f-string quoting bug**
-   - `linkedin/navigation/utils.py` uses nested quotes inside an f-string path; this should be corrected.
-
-4. **CSV ingestion becomes optional (API-first)**
-   - In the new design, automations are issued via API payloads, so CSV parsing is **not required**.
-   - If we later keep CSV as a convenience import endpoint, prefer the standard library `csv` module to avoid heavy deps.
-
----
-
 ## 1) Phase 1 — Remove AI + templating completely (repo focus = LinkedIn automation only)
 
 ### 1.1 Remove code + assets

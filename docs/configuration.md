@@ -39,7 +39,4 @@ The system automatically generates the following paths for each account based on
 Sensitive information and global settings are configured using environment variables. These can be set in a `.env` file
 in the project root.
 
-| Variable         | Description                                                      | Default       |
-|:-----------------|:-----------------------------------------------------------------|:--------------|
-| `OPENAI_API_KEY` | Your API key for OpenAI, used for AI-powered message generation. | (none)        |
-| `AI_MODEL`       | The specific OpenAI model to use for message generation.         | `gpt-4o-mini` |
+No AI-specific environment variables are required in the templating-free design.
