@@ -1,7 +1,11 @@
 # api_server/routers/schedules.py
+from datetime import datetime
+from typing import Any, cast
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from api_server.auth import verify_api_key
+from api_server.db.models import Schedule
 from api_server.schemas.schedules import ScheduleCreateRequest, ScheduleListResponse, ScheduleResponse
 from api_server.services.scheduler import (
     create_schedule,
@@ -9,8 +13,24 @@ from api_server.services.scheduler import (
     get_schedule,
     list_schedules,
 )
+from linkedin.touchpoints.models import TouchpointType
 
 router = APIRouter()
+
+
+def _schedule_to_response(schedule: Schedule) -> ScheduleResponse:
+    """Convert Schedule model to ScheduleResponse schema."""
+    return ScheduleResponse(
+        schedule_id=cast(str, schedule.schedule_id),
+        handle=cast(str, schedule.handle),
+        touchpoint_type=TouchpointType(cast(str, schedule.touchpoint_type)),
+        cron=cast(str, schedule.cron),
+        next_run_at=cast(datetime | None, schedule.next_run_at),
+        active=cast(bool, schedule.active),
+        tags=cast(dict[str, Any] | None, schedule.tags),
+        created_at=cast(datetime, schedule.created_at),
+        updated_at=cast(datetime, schedule.updated_at),
+    )
 
 
 @router.post("/schedules", response_model=ScheduleResponse, status_code=status.HTTP_201_CREATED)
@@ -31,19 +51,7 @@ def create_schedule_endpoint(request: ScheduleCreateRequest, api_key: str = Depe
     if not schedule:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create schedule")
 
-    from linkedin.touchpoints.models import TouchpointType
-
-    return ScheduleResponse(
-        schedule_id=schedule.schedule_id,  # type: ignore
-        handle=schedule.handle,  # type: ignore
-        touchpoint_type=TouchpointType(schedule.touchpoint_type),  # type: ignore
-        cron=schedule.cron,  # type: ignore
-        next_run_at=schedule.next_run_at,  # type: ignore
-        active=schedule.active,  # type: ignore
-        tags=schedule.tags,  # type: ignore
-        created_at=schedule.created_at,  # type: ignore
-        updated_at=schedule.updated_at,  # type: ignore
-    )
+    return _schedule_to_response(schedule)
 
 
 @router.get("/schedules", response_model=ScheduleListResponse)
@@ -54,23 +62,7 @@ def list_schedules_endpoint(
     """List schedules."""
     schedules = list_schedules(handle=handle)
 
-    from linkedin.touchpoints.models import TouchpointType
-
-    return ScheduleListResponse(
-        schedules=[
-            ScheduleResponse(
-                schedule_id=schedule.schedule_id,  # type: ignore
-                handle=schedule.handle,  # type: ignore
-                touchpoint_type=TouchpointType(schedule.touchpoint_type),  # type: ignore
-                cron=schedule.cron,  # type: ignore
-                active=schedule.active,  # type: ignore
-                tags=schedule.tags,  # type: ignore
-                created_at=schedule.created_at,  # type: ignore
-                updated_at=schedule.updated_at,  # type: ignore
-            )
-            for schedule in schedules
-        ]
-    )
+    return ScheduleListResponse(schedules=[_schedule_to_response(schedule) for schedule in schedules])
 
 
 @router.delete("/schedules/{schedule_id}", status_code=status.HTTP_204_NO_CONTENT)

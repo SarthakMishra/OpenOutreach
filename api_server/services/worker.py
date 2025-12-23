@@ -28,7 +28,7 @@ def _process_pending_runs() -> None:
         pending_runs = session.query(Run).filter(Run.status == "pending").limit(10).all()
 
         for run in pending_runs:
-            run_id = run.run_id  # type: ignore
+            run_id = str(run.run_id)
 
             # Check if already being processed
             with _processing_lock:

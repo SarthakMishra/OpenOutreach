@@ -3,7 +3,7 @@ import logging
 import threading
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 from croniter import croniter
 
@@ -88,24 +88,27 @@ def _process_due_schedules() -> None:
             try:
                 # Create run for this schedule
                 run_id = create_run(
-                    handle=schedule.handle,  # type: ignore
-                    touchpoint_input=schedule.touchpoint_input,  # type: ignore
-                    tags=schedule.tags,  # type: ignore
+                    handle=cast(str, schedule.handle),
+                    touchpoint_input=cast(Dict[str, Any], schedule.touchpoint_input),
+                    tags=cast(Dict[str, Any] | None, schedule.tags),
                 )
 
                 # Calculate next run time
-                next_run_at = _calculate_next_run(schedule.cron, now)  # type: ignore
-                schedule.next_run_at = next_run_at  # type: ignore
+                cron = cast(str, schedule.cron)
+                next_run_at = _calculate_next_run(cron, now)
+                schedule.next_run_at = next_run_at
                 session.commit()
 
+                schedule_id = cast(str, schedule.schedule_id)
                 logger.info(
                     "Created scheduled run %s for schedule %s (next run: %s)",
                     run_id,
-                    schedule.schedule_id,  # type: ignore
+                    schedule_id,
                     next_run_at,
                 )
             except Exception as e:
-                logger.error("Failed to process schedule %s: %s", schedule.schedule_id, e, exc_info=True)  # type: ignore
+                schedule_id = cast(str, schedule.schedule_id)
+                logger.error("Failed to process schedule %s: %s", schedule_id, e, exc_info=True)
                 session.rollback()
     finally:
         session.close()
@@ -205,7 +208,7 @@ def pause_schedule(schedule_id: str) -> bool:
         if not schedule:
             return False
 
-        schedule.active = False  # type: ignore
+        schedule.active = False
         session.commit()
 
         logger.info("Paused schedule %s", schedule_id)
@@ -222,10 +225,12 @@ def resume_schedule(schedule_id: str) -> bool:
         if not schedule:
             return False
 
-        schedule.active = True  # type: ignore
+        schedule.active = True
         # Recalculate next_run_at if it's in the past
-        if schedule.next_run_at and schedule.next_run_at < datetime.now(timezone.utc):  # type: ignore
-            schedule.next_run_at = _calculate_next_run(schedule.cron)  # type: ignore
+        next_run_at = cast(datetime | None, schedule.next_run_at)
+        if next_run_at and next_run_at < datetime.now(timezone.utc):
+            cron = cast(str, schedule.cron)
+            schedule.next_run_at = _calculate_next_run(cron)
         session.commit()
 
         logger.info("Resumed schedule %s", schedule_id)

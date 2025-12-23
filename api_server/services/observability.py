@@ -1,10 +1,12 @@
 # api_server/services/observability.py
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from linkedin.conf import ASSETS_DIR
-from linkedin.sessions.account import AccountSession
+
+if TYPE_CHECKING:
+    from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def capture_screenshot(session: AccountSession, run_id: str, suffix: str = "error") -> Optional[str]:
+def capture_screenshot(session: "AccountSession", run_id: str, suffix: str = "error") -> Optional[str]:
     """
     Capture a screenshot from the browser session.
 
@@ -45,7 +47,7 @@ def capture_screenshot(session: AccountSession, run_id: str, suffix: str = "erro
         return None
 
 
-def capture_console_logs(session: AccountSession, run_id: str) -> List[Dict[str, Any]]:
+def capture_console_logs(session: "AccountSession", run_id: str) -> List[Dict[str, Any]]:
     """
     Capture browser console logs from the session.
 
@@ -72,7 +74,7 @@ def capture_console_logs(session: AccountSession, run_id: str) -> List[Dict[str,
         return []
 
 
-def setup_console_logging(session: AccountSession) -> None:
+def setup_console_logging(session: "AccountSession") -> None:
     """
     Set up console log listeners for a session.
     This should be called when the page is created.
@@ -86,7 +88,7 @@ def setup_console_logging(session: AccountSession) -> None:
     try:
         # Store logs in session for later retrieval
         if not hasattr(session, "_console_logs"):
-            session._console_logs = []  # type: ignore
+            session._console_logs = []  # type: ignore[attr-defined]
 
         def handle_console(msg):
             log_entry = {
@@ -94,7 +96,7 @@ def setup_console_logging(session: AccountSession) -> None:
                 "text": msg.text,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
-            session._console_logs.append(log_entry)  # type: ignore
+            session._console_logs.append(log_entry)  # type: ignore[attr-defined]
             # Also log to Python logger
             log_level = logging.INFO
             if msg.type == "error":
@@ -109,8 +111,8 @@ def setup_console_logging(session: AccountSession) -> None:
         logger.error("Failed to set up console logging: %s", e, exc_info=True)
 
 
-def get_console_logs(session: AccountSession) -> List[Dict[str, Any]]:
+def get_console_logs(session: "AccountSession") -> List[Dict[str, Any]]:
     """Get captured console logs from session."""
     if hasattr(session, "_console_logs"):
-        return session._console_logs  # type: ignore
+        return session._console_logs  # type: ignore[attr-defined]
     return []

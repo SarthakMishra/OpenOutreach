@@ -1,8 +1,10 @@
 # api_server/services/quota.py
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import cast
 
 from linkedin.db.accounts import get_account
+from linkedin.db.models import Account
 from linkedin.touchpoints.models import TouchpointType
 
 logger = logging.getLogger(__name__)
@@ -23,8 +25,8 @@ def check_quota(handle: str, touchpoint_type: TouchpointType) -> tuple[bool, str
         return False, "Account not found"
 
     # Check if account is paused
-    if account.paused:  # type: ignore
-        reason = account.paused_reason or "unknown"  # type: ignore
+    if cast(bool, account.paused):
+        reason = cast(str | None, account.paused_reason) or "unknown"
         return False, f"Account is paused: {reason}"
 
     # Reset daily quotas if needed
@@ -32,16 +34,21 @@ def check_quota(handle: str, touchpoint_type: TouchpointType) -> tuple[bool, str
 
     # Check quota based on touchpoint type
     if touchpoint_type == TouchpointType.CONNECT:
-        if account.connections_today >= account.daily_connections:  # type: ignore
-            return False, f"Daily connection quota exceeded ({account.connections_today}/{account.daily_connections})"  # type: ignore
+        connections_today = cast(int, account.connections_today)
+        daily_connections = cast(int, account.daily_connections)
+        if connections_today >= daily_connections:
+            return False, f"Daily connection quota exceeded ({connections_today}/{daily_connections})"
     elif touchpoint_type == TouchpointType.DIRECT_MESSAGE:
-        if account.messages_today >= account.daily_messages:  # type: ignore
-            return False, f"Daily message quota exceeded ({account.messages_today}/{account.daily_messages})"  # type: ignore
+        messages_today = cast(int, account.messages_today)
+        daily_messages = cast(int, account.daily_messages)
+        if messages_today >= daily_messages:
+            return False, f"Daily message quota exceeded ({messages_today}/{daily_messages})"
     elif touchpoint_type in (TouchpointType.POST_REACT, TouchpointType.POST_COMMENT):
         # Use a default daily post limit (could be configurable)
         daily_posts_limit = 30
-        if account.posts_today >= daily_posts_limit:  # type: ignore
-            return False, f"Daily post quota exceeded ({account.posts_today}/{daily_posts_limit})"  # type: ignore
+        posts_today = cast(int, account.posts_today)
+        if posts_today >= daily_posts_limit:
+            return False, f"Daily post quota exceeded ({posts_today}/{daily_posts_limit})"
 
     return True, None
 
@@ -60,11 +67,11 @@ def increment_quota(handle: str, touchpoint_type: TouchpointType) -> None:
         _reset_daily_quotas_if_needed(account)
 
         if touchpoint_type == TouchpointType.CONNECT:
-            account.connections_today = (account.connections_today or 0) + 1  # type: ignore
+            account.connections_today = cast(int, account.connections_today or 0) + 1
         elif touchpoint_type == TouchpointType.DIRECT_MESSAGE:
-            account.messages_today = (account.messages_today or 0) + 1  # type: ignore
+            account.messages_today = cast(int, account.messages_today or 0) + 1
         elif touchpoint_type in (TouchpointType.POST_REACT, TouchpointType.POST_COMMENT):
-            account.posts_today = (account.posts_today or 0) + 1  # type: ignore
+            account.posts_today = cast(int, account.posts_today or 0) + 1
 
         session.commit()
     finally:
@@ -83,16 +90,17 @@ def record_failure(handle: str) -> None:
             return
 
         # Increment consecutive failures
-        account.consecutive_failures = (account.consecutive_failures or 0) + 1  # type: ignore
+        consecutive_failures = cast(int, account.consecutive_failures or 0) + 1
+        account.consecutive_failures = consecutive_failures
 
         # Check if we should pause the account
-        if account.consecutive_failures >= MAX_CONSECUTIVE_FAILURES:  # type: ignore
-            account.paused = True  # type: ignore
-            account.paused_reason = f"too_many_failures ({account.consecutive_failures} consecutive)"  # type: ignore
+        if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+            account.paused = True
+            account.paused_reason = f"too_many_failures ({consecutive_failures} consecutive)"
             logger.warning(
                 "Account %s paused due to %d consecutive failures",
                 handle,
-                account.consecutive_failures,  # type: ignore
+                consecutive_failures,
             )
 
         session.commit()
@@ -111,26 +119,28 @@ def record_success(handle: str) -> None:
         if not account:
             return
 
-        if account.consecutive_failures > 0:  # type: ignore
-            account.consecutive_failures = 0  # type: ignore
+        consecutive_failures = cast(int, account.consecutive_failures)
+        if consecutive_failures > 0:
+            account.consecutive_failures = 0
             logger.info("Reset consecutive failures for account %s", handle)
             session.commit()
     finally:
         session.close()
 
 
-def _reset_daily_quotas_if_needed(account) -> None:
+def _reset_daily_quotas_if_needed(account: Account) -> None:
     """Reset daily quotas if quota_reset_at has passed."""
 
     now = datetime.now(timezone.utc)
-    reset_at = account.quota_reset_at  # type: ignore
+    reset_at = cast(datetime | None, account.quota_reset_at)
 
     # If no reset time set, or reset time has passed, reset quotas
     if reset_at is None or reset_at <= now:
         # Reset to tomorrow at midnight UTC
         tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-        account.quota_reset_at = tomorrow  # type: ignore
-        account.connections_today = 0  # type: ignore
-        account.messages_today = 0  # type: ignore
-        account.posts_today = 0  # type: ignore
-        logger.debug("Reset daily quotas for account %s (next reset: %s)", account.handle, tomorrow)  # type: ignore
+        account.quota_reset_at = tomorrow
+        account.connections_today = 0
+        account.messages_today = 0
+        account.posts_today = 0
+        handle = cast(str, account.handle)
+        logger.debug("Reset daily quotas for account %s (next reset: %s)", handle, tomorrow)
