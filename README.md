@@ -4,9 +4,7 @@ This is a **work-in-progress** API server implementation based on the [OpenOutre
 
 **Note:** This implementation is actively being developed and may have incomplete features or breaking changes.
 
----
-
-## 🏗️ Architecture
+### 🏗️ Architecture
 
 The API server provides a clean separation between:
 
@@ -29,8 +27,8 @@ The API server provides a clean separation between:
 
 ### Prerequisites
 
-- Python 3.12+
-- [uv](https://github.com/astral-sh/uv) package manager
+- Docker and Docker Compose
+- (Optional) `.env` file for environment variables (API keys, etc.)
 
 ### Installation
 
@@ -39,24 +37,18 @@ The API server provides a clean separation between:
 git clone https://github.com/eracle/OpenOutreach.git
 cd OpenOutreach
 
-# Install dependencies
-uv sync
-
-# Install Playwright browsers
-playwright install --with-deps chromium
+# Build Docker image
+docker compose build
 ```
 
 ### Run Server
 
 ```bash
-# Start FastAPI server
-uvicorn api_server.main:app --reload
-
-# Or use Python directly
-python -m api_server.main
+# Start FastAPI server with Docker Compose
+docker compose up
 ```
 
-Server runs on `http://localhost:8000` by default.
+Server runs on `http://localhost:8000` by default. VNC access for browser debugging is available on port `5900`.
 
 ---
 
@@ -134,7 +126,7 @@ If `API_KEY` environment variable is not set, authentication is disabled (develo
 - **`profile_visit`** - Visit profile with configurable duration/scrolling
 - **`connect`** - Send connection request (with optional note)
 - **`direct_message`** - Send direct message to connected profile
-- **`post_react`** - React to LinkedIn post (placeholder)
+- **`post_react`** - React to LinkedIn post
 - **`post_comment`** - Comment on LinkedIn post (placeholder)
 - **`inmail`** - Send InMail (placeholder)
 

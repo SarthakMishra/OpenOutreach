@@ -51,8 +51,10 @@ class PostReactTouchpoint(Touchpoint):
                 "result": {
                     "post_url": self.input.post_url,
                     "reaction": self.input.reaction,
-                } if success else None,
-                "error": None if success else "Post reaction not yet implemented",
+                }
+                if success
+                else None,
+                "error": None if success else "Failed to react to post",
             }
 
         except Exception as e:
@@ -62,4 +64,3 @@ class PostReactTouchpoint(Touchpoint):
                 "result": None,
                 "error": str(e),
             }
-

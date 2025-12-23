@@ -50,8 +50,10 @@ class PostCommentTouchpoint(Touchpoint):
                 "result": {
                     "post_url": self.input.post_url,
                     "comment_text": self.input.comment_text,
-                } if success else None,
-                "error": None if success else "Post comment not yet implemented",
+                }
+                if success
+                else None,
+                "error": None if success else "Failed to post comment",
             }
 
         except Exception as e:
@@ -61,4 +63,3 @@ class PostCommentTouchpoint(Touchpoint):
                 "result": None,
                 "error": str(e),
             }
-
