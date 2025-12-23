@@ -21,8 +21,8 @@ dev = [
   "factory-boy>=3.3.3",
   "pytest>=9.0.2",
   "pytest-mock>=3.15.1",
+  "requests>=2.32.5",
   "ruff>=0.14.10",
-  "taskipy>=1.14.1",
   "ty>=0.0.5",
 ]
 production = []
@@ -30,24 +30,11 @@ production = []
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-
-[tool.taskipy.settings]
-use_vars = true
-
-[tool.taskipy.variables]
-compose = "docker compose -f docker-compose.yml"
-
-[tool.taskipy.tasks]
-help = "task --list"
-attach = "{compose} logs -f"
-test = "{compose} run --remove-orphans app py.test -vv --cache-clear"
-stop = "{compose} stop"
-build = "{compose} build"
-up = "{compose} up --build"
-view = "sh -c 'vinagre vnc://127.0.0.1:5900 > /dev/null 2>&1 &'"
-up_view = "{compose} up --build -d && sleep 3 && task view && {compose} logs -f app"
-lint = "uv run ruff check ."
-typecheck = "uv run ty check ."
+markers = [
+    "e2e: End-to-end tests requiring running server and real LinkedIn UI",
+    "slow: Long-running or brittle test flows",
+    "requires_inmail: Tests that require account with InMail support",
+]
 
 [tool.ruff]
 line-length = 120

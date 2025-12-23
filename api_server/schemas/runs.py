@@ -26,6 +26,7 @@ class RunResponse(BaseModel):
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
     error_screenshot: Optional[str] = None  # Path to screenshot on failure
+    console_logs: Optional[list[Dict[str, Any]]] = None  # Browser console logs
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     duration_ms: Optional[int] = None
