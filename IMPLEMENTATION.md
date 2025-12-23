@@ -131,7 +131,7 @@ Introduce a simple internal contract:
 
 ### 3.1 Server layout (new package)
 Add a top-level package, e.g.:
-- `openoutreach_server/`
+- `api_server/`
   - `main.py` (FastAPI app)
   - `routers/` (jobs, schedules, accounts, runs)
   - `schemas/` (Pydantic request/response)
@@ -189,7 +189,7 @@ class Run(Base):
 ```
 
 **Implementation:**
-- Create `openoutreach_server/db/models.py` with `Run` model
+- Create `api_server/db/models.py` with `Run` model
 - Log every touchpoint execution:
   - Create `Run` record when `POST /runs` is called (status="pending")
   - Update to "running" when execution starts
@@ -363,7 +363,7 @@ This keeps the E2E suite compatible with the architecture (server executes singl
 ## 8) Phase 8 — Docker / deployment adjustments
 
 Update `local.yml` (and/or add `compose/server/`) to run:
-- API server container: `uvicorn openoutreach_server.main:app`
+- API server container: `uvicorn api_server.main:app`
 - Optional worker container (if you split worker from API)
 - Optional Redis (if you later adopt Celery/RQ)
 

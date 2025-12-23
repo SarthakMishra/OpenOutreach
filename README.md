@@ -1,221 +1,149 @@
 ![OpenOutreach Logo](docs/logo.png)
 
-> **The open-source growth engine that puts your LinkedIn B2B lead generation on autopilot.**
+This is a **work-in-progress** API server implementation based on the [OpenOutreach](https://github.com/eracle/OpenOutreach) project. The API provides programmatic access to LinkedIn automation capabilities through a FastAPI-based REST interface.
 
-<div align="center">
-
-[![GitHub stars](https://img.shields.io/github/stars/eracle/OpenOutreach.svg?style=flat-square&logo=github)](https://github.com/eracle/OpenOutreach/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/eracle/OpenOutreach.svg?style=flat-square&logo=github)](https://github.com/eracle/OpenOutreach/network/members)
-[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
-[![Open Issues](https://img.shields.io/github/issues/eracle/OpenOutreach.svg?style=flat-square&logo=github)](https://github.com/eracle/OpenOutreach/issues)
-
-<br/>
-
-# Demo:
-
-<img src="docs/demo.gif" alt="Demo Animation" width="100%"/>
-
-</div>
+**Note:** This implementation is actively being developed and may have incomplete features or breaking changes.
 
 ---
 
-### 🚀 What is OpenOutreach?
+## 🏗️ Architecture
 
-OpenOutreach is a **self-hosted, open-source LinkedIn automation tool** designed for B2B lead generation, without the
-risks and costs of cloud SaaS services.
+The API server provides a clean separation between:
 
-It automates the entire outreach process in a **stealthy, human-like way**:
+- **API Layer** (`api_server/`): FastAPI endpoints, request/response schemas, authentication
+- **Touchpoints** (`linkedin/touchpoints/`): Atomic automation actions (enrich, connect, message, visit, etc.)
+- **Actions** (`linkedin/actions/`): Low-level LinkedIn browser automation
+- **Database**: Separate databases for server state (runs, schedules) and per-account profile data
 
-- Discovers and enriches target profiles
-- Sends personalized connection requests
-- Follows up with custom messages after acceptance
-- Tracks everything in a local database (full data ownership, resumable workflows)
+### Key Features
 
-**Why choose OpenOutreach?**
-
-- 🛡️ **Undetectable** — Playwright + stealth plugins mimic real user behavior
-- 🐍 **Fully customizable** — Python-based campaigns for unlimited flexibility
-- 💾 **Local execution** — You own your workflow
-- 🐳 **Easy deployment** — Dockerized, one-command setup
-- ✨ **AI-ready** — Built-in templating for hyper-personalized messages (integrate GPT easily)
-
-Perfect for founders, sales teams, and agencies who want powerful automation **without account bans or subscription
-lock-in**.
+- **No Workflows**: Each API call executes one atomic LinkedIn action
+- **Run tracking**: All executions logged to database with full audit trail
+- **Scheduling**: Cron-based recurring touchpoint execution
+- **Account locking**: Prevents concurrent executions per account
+- **Background workers**: Automatic processing of queued runs
 
 ---
 
-## ⚡ Quick Start (Local Installation)
-
-Get up and running in minutes by running the application directly on your machine.
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- [Git](https://git-scm.com/)
-- [Python](https://www.python.org/downloads/) (3.11+ recommended)
-- `venv` for creating virtual environments (usually included with Python)
+- Python 3.12+
+- [uv](https://github.com/astral-sh/uv) package manager
 
-### 1. Clone the Repository
+### Installation
+
 ```bash
+# Clone repository
 git clone https://github.com/eracle/OpenOutreach.git
 cd OpenOutreach
-```
 
-### 2. Set Up a Virtual Environment
-It's highly recommended to use a virtual environment to manage dependencies.
-```bash
-# Create the virtual environment
-python -m venv venv
-
-# Activate it
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
-We use `uv` for dependency management.
-```bash
-# Install uv (if not installed)
-pip install uv
-
-# Install project dependencies (from pyproject.toml)
+# Install dependencies
 uv sync
 
-# Install required browser assets
+# Install Playwright browsers
 playwright install --with-deps chromium
 ```
 
-### 4. Configure the Application
-You need to provide your LinkedIn credentials.
+### Run Server
 
-1. **Configure LinkedIn accounts**
-   ```bash
-   cp assets/accounts.secrets.template.yaml assets/accounts.secrets.yaml
-   ```
-   Edit `assets/accounts.secrets.yaml` with your credentials.
-
-### 5. Run the Application
-
-You can run the main script directly (API-driven workflows are the new focus):
 ```bash
-python main.py
-```
-The tool is fully resumable — stop/restart anytime without losing progress.
----
+# Start FastAPI server
+uvicorn api_server.main:app --reload
 
-## 🐳 Docker Installation
-
-We also support running the application via Docker. This is a great option for ensuring a consistent environment and simplifying dependency management.
-
-For full instructions, please see the **[Docker Installation Guide](./docs/docker.md)**.
-
----
-## ✨ Features
-
-| Feature                            | Description                                                                                                          |
-|------------------------------------|----------------------------------------------------------------------------------------------------------------------|
-| 🤖 **Advanced Browser Automation** | Powered by Playwright with stealth plugins for human-like, undetectable interactions.                                |
-| 🛡️ **Reliable Data Scraping**     | Uses LinkedIn's internal Voyager API for accurate, structured profile data (no fragile HTML parsing).                |
-| 🐍 **Python-Native Campaigns**     | Write flexible, powerful automation sequences directly in Python.                                                    |
-| 🔄 **Stateful Workflow Engine**    | Tracks profile states (`DISCOVERED` → `ENRICHED` → `CONNECTED` → `COMPLETED`) in a local DB – resumable at any time. |
-| 💾 **Persistent Local Database**   | Full data ownership via dedicated SQLite DB per account.                                                             |
-| 🐳 **Containerized Setup**         | One-command Docker + Make deployment.                                                                                |
-| 🖥️ **Visual Debugging**           | Real-time browser view via built-in VNC server (`localhost:5900`).                                                   |
-| ✍️ **API-Driven Messaging**        | Explicit message text supplied by clients; no templating/AI generation in this repo.                                 |
-
----
-
-### ❤️ Support OpenOutreach – Keep the Leads Flowing!
-
-This project is built in spare time to provide powerful, **free** open-source growth tools.
-
-Maintaining stealth, fixing bugs, adding features (multi-account scaling, better templates, AI enhancements), and
-staying ahead of LinkedIn changes takes serious effort.
-
-**Your sponsorship funds faster updates and keeps it free for everyone.**
-
-<div align="center">
-
-[![Sponsor with GitHub](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ff69b4?style=for-the-badge&logo=github)](https://github.com/sponsors/eracle)
-
-<br/>
-
-**Popular Tiers & Perks:**
-
-| Tier        | Monthly | Benefits                                                              |
-|-------------|---------|-----------------------------------------------------------------------|
-| ☕ Supporter | $5      | Huge thanks + name in README supporters list                          |
-| 🚀 Booster  | $25     | All above + priority feature requests + early access to new campaigns |
-| 🦸 Hero     | $100    | All above + personal 1-on-1 support + influence roadmap               |
-| 💎 Legend   | $500+   | All above + custom feature development + shoutout in releases         |
-
-**Thank you to all sponsors — you're powering open-source B2B growth!** 🚀
-
-</div>
-
----
-
-### 🗓️ Book a Free 15-Minute Call
-
-Got a specific use case, feature request, or questions about setup?
-
-Book a **free 15-minute call** — I’d love to hear your needs and improve the tool based on real feedback.
-
-<div align="center">
-
-[![Book a 15-min call](https://img.shields.io/badge/Book%20a%2015--min%20call-28A745?style=for-the-badge&logo=calendar)](https://calendly.com/eracle/new-meeting)
-
-</div>
-
----
-
-## 📖 Usage & Customization
-
-The default campaign (`linkedin/campaigns/connect_follow_up.py`) handles:
-
-- Profile enrichment
-- Connection requests
-- Personalized follow-ups
-
-**Profile states:** `DISCOVERED` → `ENRICHED` → `CONNECTED` → `COMPLETED` (or `FAILED`)
-
-Edit the campaign file directly for custom logic, templates, or AI integration.
-
----
-
-## 📂 Project Structure
-
-```
-├── assets/
-│   ├── accounts.secrets.yaml      # LinkedIn credentials
-│   └── inputs/                    # (CSV input removed in this API-focused version)
-├── docs/
-│   ├── docker.md                  # NEW: Docker setup guide
-│   └── ...
-├── linkedin/
-│   ├── actions/                   # Browser actions
-│   ├── api/                       # Voyager API client
-│   ├── campaigns/                 # Workflows
-│   ├── db/                        # SQLite utilities
-│   ├── navigation/                # Login helpers
-│   └── sessions/                  # Session management
-├── main.py                        # Entry point
-├── local.yml                      # Docker Compose
-└── Makefile                       # Shortcuts
+# Or use Python directly
+python -m api_server.main
 ```
 
----
-
-## 📚 Documentation
-
-- [Docker Installation](./docs/docker.md)
-- [Configuration](./docs/configuration.md)
-- [Testing Strategy](./docs/testing.md)
+Server runs on `http://localhost:8000` by default.
 
 ---
 
-## 💬 Community
+## 📡 API Endpoints
 
-Join for support and discussions:  
-[Telegram Group](https://t.me/+Y5bh9Vg8UVg5ODU0)
+### Health
+
+- `GET /health` - Health check
+
+### Accounts
+
+- `POST /api/v1/accounts` - Create or update a LinkedIn account
+  ```json
+  {
+    "handle": "account1",
+    "username": "user@example.com",
+    "password": "password123",
+    "active": true,
+    "proxy": null,
+    "daily_connections": 50,
+    "daily_messages": 20,
+    "booking_link": null
+  }
+  ```
+- `GET /api/v1/accounts` - List all accounts
+- `GET /api/v1/accounts/{handle}` - Get account by handle
+- `DELETE /api/v1/accounts/{handle}` - Delete account
+
+### Runs
+
+- `POST /api/v1/runs` - Create and queue a touchpoint execution
+  ```json
+  {
+    "handle": "account1",
+    "touchpoint": {
+      "type": "connect",
+      "url": "https://www.linkedin.com/in/username/",
+      "note": "Optional connection note"
+    },
+    "dry_run": false,
+    "tags": {}
+  }
+  ```
+- `GET /api/v1/runs/{run_id}` - Get run status and results
+- `GET /api/v1/runs` - List runs (filter by `handle`, `status`, pagination)
+
+### Schedules
+
+- `POST /api/v1/schedules` - Create recurring touchpoint schedule
+  ```json
+  {
+    "handle": "account1",
+    "touchpoint": { "type": "profile_visit", "url": "..." },
+    "cron": "0 9 * * *",
+    "tags": {}
+  }
+  ```
+- `GET /api/v1/schedules` - List schedules
+- `DELETE /api/v1/schedules/{schedule_id}` - Delete schedule
+
+### Authentication
+
+All endpoints (except `/health`) require API key authentication via header:
+```
+X-API-Key: your-secret-key
+```
+
+If `API_KEY` environment variable is not set, authentication is disabled (development mode).
+
+---
+
+## 🎯 Available Touchpoints
+
+- **`profile_enrich`** - Enrich LinkedIn profile data
+- **`profile_visit`** - Visit profile with configurable duration/scrolling
+- **`connect`** - Send connection request (with optional note)
+- **`direct_message`** - Send direct message to connected profile
+- **`post_react`** - React to LinkedIn post (placeholder)
+- **`post_comment`** - Comment on LinkedIn post (placeholder)
+- **`inmail`** - Send InMail (placeholder)
+
+---
+
+## 📖 Documentation
+
+- [Implementation Plan](./IMPLEMENTATION.md) - Detailed architecture and roadmap
+- [Docker Installation](./docs/docker.md) - Containerized setup
 
 ---
 
@@ -229,14 +157,7 @@ Join for support and discussions:
 
 **Not affiliated with LinkedIn.**
 
-Automation may violate LinkedIn's terms (Section 8.2). Risk of account suspension exists.
+Automation may violate LinkedIn's terms. Risk of account suspension exists.
 
 **Use at your own risk — no liability assumed.**
 
----
-
-<div align="center">
-
-**Made with ❤️**
-
-</div>

@@ -7,7 +7,6 @@ from typing import Any, Dict
 
 from api_server.db.engine import get_session
 from api_server.db.models import Run
-from linkedin.touchpoints.models import TouchpointType
 
 logger = logging.getLogger(__name__)
 
@@ -82,69 +81,23 @@ def execute_run(run_id: str) -> None:
 
         # Capture run data for inner function
         handle = run.handle
-        touchpoint_type_str = run.touchpoint_type
         touchpoint_input = run.touchpoint_input
 
         def _execute():
             """Execute touchpoint within account lock."""
             with account_lock:
                 try:
-                    from linkedin.actions.connect import send_connection_request
-                    from linkedin.actions.message import send_follow_up_message
-                    from linkedin.actions.profile import scrape_profile
-                    from linkedin.navigation.enums import ProfileState
-                    from linkedin.sessions.registry import SessionKey
+                    from linkedin.sessions.registry import AccountSessionRegistry
+                    from linkedin.touchpoints.factory import create_touchpoint
 
-                    # Parse touchpoint input
-                    touchpoint_type = TouchpointType(touchpoint_type_str)
-                    input_data = touchpoint_input
+                    # Create touchpoint instance from input
+                    touchpoint = create_touchpoint(touchpoint_input)
 
-                    # Create session key
-                    key = SessionKey(handle=handle, run_id=run_id)
+                    # Get account session (touchpoint will create SessionKey internally)
+                    session = AccountSessionRegistry.get_or_create(handle=handle, run_id=run_id)
 
-                    # Execute based on touchpoint type
-                    result_data = {}
-
-                    if touchpoint_type == TouchpointType.PROFILE_ENRICH:
-                        profile_dict = {
-                            "url": input_data.get("url"),
-                            "public_identifier": input_data.get("public_identifier"),
-                        }
-                        profile, data = scrape_profile(key, profile_dict)
-                        result_data = {
-                            "success": profile is not None,
-                            "result": {"profile": profile, "data": data} if profile else None,
-                            "error": None if profile else "Failed to enrich profile",
-                        }
-
-                    elif touchpoint_type == TouchpointType.CONNECT:
-                        profile_dict = {
-                            "url": input_data.get("url"),
-                            "public_identifier": input_data.get("public_identifier"),
-                        }
-                        note = input_data.get("note")
-                        status = send_connection_request(key, profile_dict, note=note)
-                        result_data = {
-                            "success": status in [ProfileState.PENDING, ProfileState.CONNECTED],
-                            "result": {"status": status.value},
-                            "error": None,
-                        }
-
-                    elif touchpoint_type == TouchpointType.DIRECT_MESSAGE:
-                        profile_dict = {
-                            "url": input_data.get("url"),
-                            "public_identifier": input_data.get("public_identifier"),
-                        }
-                        message = input_data.get("message", "")
-                        status = send_follow_up_message(key, profile_dict, message=message)
-                        result_data = {
-                            "success": status.value == "sent",
-                            "result": {"status": status.value},
-                            "error": None if status.value == "sent" else "Message not sent",
-                        }
-
-                    else:
-                        raise ValueError(f"Unsupported touchpoint type: {touchpoint_type}")
+                    # Execute touchpoint
+                    result_data = touchpoint.execute(session)
 
                     # Calculate duration
                     duration_ms = int((datetime.now(timezone.utc) - started_at).total_seconds() * 1000)

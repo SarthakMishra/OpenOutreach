@@ -2,7 +2,20 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class AccountCreateRequest(BaseModel):
+    """Request to create or update an account."""
+
+    handle: str = Field(..., description="Unique account handle/identifier")
+    username: str = Field(..., description="LinkedIn username/email")
+    password: str = Field(..., description="LinkedIn password")
+    active: bool = Field(True, description="Whether account is active")
+    proxy: Optional[str] = Field(None, description="Optional proxy configuration")
+    daily_connections: int = Field(50, ge=0, description="Daily connection limit")
+    daily_messages: int = Field(20, ge=0, description="Daily message limit")
+    booking_link: Optional[str] = Field(None, description="Optional booking link")
 
 
 class AccountResponse(BaseModel):
