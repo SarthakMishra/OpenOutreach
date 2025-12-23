@@ -11,8 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 def send_connection_request(
-        key: SessionKey,
-        profile: Dict[str, Any],
+    key: SessionKey,
+    profile: Dict[str, Any],
+    note: str | None = None,
 ) -> ProfileState:
     """
     Sends a LinkedIn connection request WITHOUT a note (fastest & safest).
@@ -26,7 +27,7 @@ def send_connection_request(
         csv_hash=key.csv_hash,
     )
 
-    public_identifier = profile.get('public_identifier')
+    public_identifier = profile.get("public_identifier")
 
     logger.debug("Checking current connection status...")
     connection_status = get_connection_status(session, profile)
@@ -38,16 +39,23 @@ def send_connection_request(
     }
 
     if connection_status in skip_reasons:
-        logger.info("Skipping %s – %s", public_identifier, skip_reasons[connection_status])
+        logger.info(
+            "Skipping %s – %s", public_identifier, skip_reasons[connection_status]
+        )
         return connection_status
 
-    # Send invitation WITHOUT note (current active flow)
-    s1 = _connect_direct(session)
-    s2 = s1 or _connect_via_more(session)
+    # If a note is provided, use the full "Add a note" flow.
+    if isinstance(note, str) and note.strip():
+        _perform_send_invitation_with_note(session, note.strip())
+        success = _check_weekly_invitation_limit(session)
+    else:
+        # Send invitation WITHOUT note (current active flow)
+        s1 = _connect_direct(session)
+        s2 = s1 or _connect_via_more(session)
 
-    s3 = s2 and _click_without_note(session)
-    s4 = s3 and _check_weekly_invitation_limit(session)
-    success = s4
+        s3 = s2 and _click_without_note(session)
+        s4 = s3 and _check_weekly_invitation_limit(session)
+        success = s4
 
     status = ProfileState.PENDING if success else ProfileState.ENRICHED
     logger.info(f"Connection request {status} → {public_identifier}")
@@ -55,7 +63,9 @@ def send_connection_request(
 
 
 def _check_weekly_invitation_limit(session):
-    weekly_invitation_limit = session.page.locator('div[class*="ip-fuse-limit-alert__warning"]')
+    weekly_invitation_limit = session.page.locator(
+        'div[class*="ip-fuse-limit-alert__warning"]'
+    )
     if weekly_invitation_limit.count() != 0:
         raise ReachedConnectionLimit("Weekly connection limit pop up appeared")
 
@@ -65,7 +75,9 @@ def _check_weekly_invitation_limit(session):
 def _connect_direct(session):
     session.wait()
     top_card = get_top_card(session)
-    direct = top_card.locator('button[aria-label*="Invite"][aria-label*="to connect"]:visible')
+    direct = top_card.locator(
+        'button[aria-label*="Invite"][aria-label*="to connect"]:visible'
+    )
     if direct.count() == 0:
         return False
 
@@ -85,8 +97,7 @@ def _connect_via_more(session):
 
     # Fallback: More → Connect
     more = top_card.locator(
-        'button[id*="overflow"]:visible, '
-        'button[aria-label*="More actions"]:visible'
+        'button[id*="overflow"]:visible, button[aria-label*="More actions"]:visible'
     )
     if more.count() == 0:
         return False
@@ -130,14 +141,20 @@ def _perform_send_invitation_with_note(session, message: str):
     session.wait()
     top_card = get_top_card(session)
 
-    direct = top_card.locator('button[aria-label*="Invite"][aria-label*="to connect"]:visible')
+    direct = top_card.locator(
+        'button[aria-label*="Invite"][aria-label*="to connect"]:visible'
+    )
     if direct.count() > 0:
         direct.first.click()
     else:
-        more = top_card.locator('button[id*="overflow"], button[aria-label*="More actions"]').first
+        more = top_card.locator(
+            'button[id*="overflow"], button[aria-label*="More actions"]'
+        ).first
         more.click()
         session.wait()
-        session.page.locator('div[role="button"][aria-label^="Invite"][aria-label*=" to connect"]').first.click()
+        session.page.locator(
+            'div[role="button"][aria-label^="Invite"][aria-label*=" to connect"]'
+        ).first.click()
 
     session.wait()
     session.page.locator('button:has-text("Add a note")').first.click()
@@ -148,9 +165,17 @@ def _perform_send_invitation_with_note(session, message: str):
     session.wait()
     logger.debug("Filled note (%d chars)", len(message))
 
-    session.page.locator('button:has-text("Send"), button[aria-label*="Send invitation"]').first.click(force=True)
+    session.page.locator(
+        'button:has-text("Send"), button[aria-label*="Send invitation"]'
+    ).first.click(force=True)
     session.wait()
     logger.debug("Connection request with note sent")
+
+    error = session.page.locator('div[data-test-artdeco-toast-item-type="error"]')
+    if error.count() != 0:
+        raise SkipProfile(f"{error.inner_text().strip()}")
+
+    return True
 
 
 if __name__ == "__main__":
@@ -181,7 +206,6 @@ if __name__ == "__main__":
     status = send_connection_request(
         key=key,
         profile=test_profile,
-        template_file="./assets/templates/messages/followup.j2",
     )
 
     print(f"Finished → Status: {status.value}")

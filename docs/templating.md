@@ -5,6 +5,17 @@ supports three types of templates: `jinja`, and `ai_prompt`.
 
 The `render_template` function in `linkedin/templates/renderer.py` is responsible for processing these templates.
 
+## Bypassing AI entirely (CSV-driven messages)
+
+If you prefer to **not use AI at all**, you can pass exact message text per lead via the input CSV:
+
+- Add a `followup_message` column in your CSV (alongside `url`)
+- The default campaign (`connect_follow_up`) will send that message once you’re connected, **without rendering templates**
+  and without requiring `OPENAI_API_KEY`.
+
+Optionally, you can also add a `connect_note` column and enable it in `linkedin/campaigns/connect_follow_up.py`
+(`SEND_CONNECT_NOTE = True`) to send a note with the connection request.
+
 ## Template Types
 
 ### 1. `jinja`
