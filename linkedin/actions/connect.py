@@ -24,7 +24,7 @@ def send_connection_request(
     session = AccountSessionRegistry.get_or_create(
         handle=key.handle,
         campaign_name=key.campaign_name,
-        csv_hash=key.csv_hash,
+        input_hash=key.input_hash,
     )
 
     public_identifier = profile.get("public_identifier")

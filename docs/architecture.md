@@ -8,9 +8,9 @@ execution engine.
 The system is designed to automate interactions on LinkedIn based on configurable campaigns. The core workflow is as
 follows:
 
-1. **Input**: LinkedIn profile or company URLs are provided via CSV files.
+1. **Input**: LinkedIn profile or company URLs are provided via API payloads (CSV import removed). Accounts are stored in the server database via API (no YAML ingestion).
 2. **Data Caching**: The system scrapes detailed information for each URL and stores it in a local SQLite database per
-   account(`data/<handle>.db`). This database acts as a cache to avoid redundant scraping.
+   account (`data/<handle>.db`). This database acts as a cache to avoid redundant scraping.
 3. **Campaign Execution**: Campaigns are defined as Python modules that orchestrate a sequence of actions (e.g., send
    connection request, send message) for each entity.
 4. **State Management**: The state of the campaign (e.g., which profiles have been processed) is tracked in the same

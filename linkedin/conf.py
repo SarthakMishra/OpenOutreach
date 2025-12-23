@@ -4,8 +4,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, Any, List
 
-import yaml
 from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, scoped_session
+
+from linkedin.db.models import Account
 
 load_dotenv()
 
@@ -25,73 +28,62 @@ FIXTURE_DIR = ROOT_DIR / "tests" / "fixtures"
 FIXTURE_PROFILES_DIR = FIXTURE_DIR / "profiles"
 FIXTURE_PAGES_DIR = FIXTURE_DIR / "pages"
 
+ACCOUNTS_DB_PATH = ASSETS_DIR / "accounts.db"
+
 MIN_DELAY = 5
 MAX_DELAY = 8
 
 OPPORTUNISTIC_SCRAPING = False
-
-# ----------------------------------------------------------------------
-# SINGLE secrets file
-# ----------------------------------------------------------------------
-SECRETS_PATH = ASSETS_DIR / "accounts.secrets.yaml"
-
-if not SECRETS_PATH.exists():
-    raise FileNotFoundError(
-        f"\nMissing config file: {SECRETS_PATH}\n"
-        "→ cp assets/accounts.secrets.example.yaml assets/accounts.secrets.yaml\n"
-        "  and fill in your accounts (public settings + credentials)\n"
-    )
-
-# Load everything from the single secrets file
-with open(SECRETS_PATH, "r", encoding="utf-8") as f:
-    _raw_config = yaml.safe_load(f) or {}
-
-_accounts_config = _raw_config.get("accounts", {})
 
 
 # ----------------------------------------------------------------------
 # Public API
 # ----------------------------------------------------------------------
 def get_account_config(handle: str) -> Dict[str, Any]:
-    """Return full config (public + secrets) for a handle from the single file."""
-    if handle not in _accounts_config:
-        raise KeyError(f"Account '{handle}' not found in {SECRETS_PATH}")
+    """Return full config (public + secrets) for a handle from the accounts DB."""
+    session = _get_accounts_session()
+    try:
+        acct = session.get(Account, handle)
+        if not acct:
+            raise KeyError(f"Account '{handle}' not found in accounts DB")
 
-    acct = _accounts_config[handle]
+        account_db_path = DATA_DIR / f"{handle}.db"
 
-    # Each account gets its own database: assets/data/elonmusk.db
-    account_db_path = DATA_DIR / f"{handle}.db"
-
-    return {
-        "handle": handle,
-        "active": acct.get("active", True),
-        "proxy": acct.get("proxy"),
-        "daily_connections": acct.get("daily_connections", 50),
-        "daily_messages": acct.get("daily_messages", 20),
-        # Credentials (can be missing during dev, but required in prod)
-        "username": acct.get("username"),
-        "password": acct.get("password"),
-        # Runtime paths
-        "cookie_file": COOKIES_DIR / f"{handle}.json",
-        "db_path": account_db_path,  # per-handle database
-        "booking_link": acct.get("booking_link"),
-    }
+        return {
+            "handle": handle,
+            "active": bool(acct.active),
+            "proxy": acct.proxy,
+            "daily_connections": acct.daily_connections,
+            "daily_messages": acct.daily_messages,
+            # Credentials (consider encrypting/hashing in server layer)
+            "username": acct.username,
+            "password": acct.password,
+            # Runtime paths
+            "cookie_file": COOKIES_DIR / f"{handle}.json",
+            "db_path": account_db_path,  # per-handle database
+            "booking_link": acct.booking_link,
+        }
+    finally:
+        session.close()
 
 
 def list_active_accounts() -> List[str]:
-    """Return list of active account handles (order preserved from YAML)."""
-    return [
-        handle for handle, cfg in _accounts_config.items() if cfg.get("active", True)
-    ]
+    """Return list of active account handles from the accounts DB."""
+    session = _get_accounts_session()
+    try:
+        rows = (
+            session.query(Account)
+            .filter_by(active=True)
+            .order_by(Account.handle.asc())
+            .all()
+        )
+        return [row.handle for row in rows]
+    finally:
+        session.close()
 
 
 def get_first_active_account() -> str | None:
-    """
-    Return the first active account handle from the config, or None if no active accounts.
-
-    The order is deterministic: it follows the insertion order in accounts.secrets.yaml
-    (YAML dictionaries preserve order since Python 3.7+).
-    """
+    """Return the first active account handle from the DB, or None if no active accounts."""
     active = list_active_accounts()
     return active[0] if active else None
 
@@ -107,11 +99,23 @@ def get_first_account_config() -> Dict[str, Any] | None:
 
 
 # ----------------------------------------------------------------------
+# Accounts DB session helper
+# ----------------------------------------------------------------------
+def _get_accounts_session():
+    ACCOUNTS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    db_url = f"sqlite:///{ACCOUNTS_DB_PATH}"
+    engine = create_engine(db_url, connect_args={"check_same_thread": False})
+    Account.__table__.create(bind=engine, checkfirst=True)
+    Session = scoped_session(sessionmaker(bind=engine))
+    return Session()
+
+
+# ----------------------------------------------------------------------
 # Debug output when run directly
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
-    print("LinkedIn Automation – Active accounts")
-    print(f"Config file : {SECRETS_PATH}")
+    print("LinkedIn Automation – Active accounts (DB)")
+    print(f"Accounts DB : {ACCOUNTS_DB_PATH}")
     print(f"Databases stored in: {DATA_DIR}")
     print("-" * 60)
 

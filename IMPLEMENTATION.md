@@ -25,7 +25,11 @@ Primary goals:
   - `ensure_browser()` bootstraps via `linkedin/navigation/login.py`.
   - `wait()` contains opportunistic scraping behavior (optional).
 - `linkedin/sessions/registry.py`
-  - In-process registry keyed by `(handle, campaign_name, csv_hash)` to reuse `AccountSession`.
+  - In-process registry keyed by `(handle, campaign_name, input_hash)` to reuse `AccountSession`.
+
+### Accounts (current)
+- `assets/accounts.secrets.template.yaml` (file-based, manual editing)
+- Read at runtime via `linkedin/conf.py` → `get_account_config(handle)`
 
 ### Actions (LinkedIn touchpoints implemented)
 - **Profile enrichment**: `linkedin/actions/profile.py` (Voyager API fetch via Playwright context)
@@ -128,6 +132,13 @@ Add a top-level package, e.g.:
 Add a simple API key to start:
 - `X-API-Key: <key>`
 - Load from env var (later expand to OAuth/JWT if needed).
+
+### 3.4 Account management (DB-backed; endpoints later)
+- **Implemented now (DB layer):** `accounts` table and CRUD helpers in `linkedin/db/accounts.py`; `linkedin/conf.py` now reads accounts from the DB (no YAML ingestion; no backward compatibility).
+- **To do later (when FastAPI is added):** expose `/accounts` CRUD endpoints that wrap these DB helpers.
+- Touchpoint execution:
+  - Every `run` or `touchpoint` payload must include `handle` (or account ID) to select credentials/cookies.
+  - Locking remains per-account to avoid concurrent sessions.
 
 ---
 

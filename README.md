@@ -179,13 +179,6 @@ The default campaign (`linkedin/campaigns/connect_follow_up.py`) handles:
 
 Edit the campaign file directly for custom logic, templates, or AI integration.
 
-### CSV-driven custom messages (no AI)
-
-Your input CSV can contain extra columns beyond `url`. Two columns are recognized by the default campaign:
-
-- `followup_message`: exact DM text to send once the profile is connected (bypasses templates/AI)
-- `connect_note`: optional note to include with the connection request (**disabled by default**; enable `SEND_CONNECT_NOTE = True` in `linkedin/campaigns/connect_follow_up.py`)
-
 ---
 
 ## 📂 Project Structure

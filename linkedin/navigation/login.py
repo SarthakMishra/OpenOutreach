@@ -111,7 +111,7 @@ if __name__ == "__main__":
     session, key = AccountSessionRegistry.get_or_create_from_path(
         handle=handle,
         campaign_name="test_message",
-        csv_path=None,
+        input_path=None,
     )
 
     session.ensure_browser()

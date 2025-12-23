@@ -11,18 +11,18 @@ logger = logging.getLogger(__name__)
 
 
 class AccountSessionRegistry:
-    _instances: dict[SessionKey, "AccountSession"] = {}
+    _instances: dict["SessionKey", "AccountSession"] = {}
 
     @classmethod
     def get_or_create(
         cls,
         handle: str,
         campaign_name: str,
-        csv_hash: str,
+        input_hash: str,
     ) -> "AccountSession":
         from .account import AccountSession
 
-        key = SessionKey(handle, campaign_name, csv_hash)
+        key = SessionKey(handle, campaign_name, input_hash)
 
         if key not in cls._instances:
             cls._instances[key] = AccountSession(key)
@@ -37,11 +37,11 @@ class AccountSessionRegistry:
         cls,
         handle: str,
         campaign_name: str,
-        csv_path: Path | str,
+        input_path: Path | str,
     ) -> "AccountSession":
-        csv_path = Path(csv_path)
-        key = SessionKey.make(handle, campaign_name, csv_path)
-        return cls.get_or_create(key.handle, key.campaign_name, key.csv_hash), key
+        input_path = Path(input_path)
+        key = SessionKey.make(handle, campaign_name, input_path)
+        return cls.get_or_create(key.handle, key.campaign_name, key.input_hash), key
 
     @classmethod
     def get_existing(cls, key: SessionKey) -> Optional["AccountSession"]:
@@ -57,30 +57,30 @@ class AccountSessionRegistry:
 class SessionKey(NamedTuple):
     handle: str
     campaign_name: str
-    csv_hash: str
+    input_hash: str
 
     def __str__(self) -> str:
-        return f"{self.handle}::{self.campaign_name}::{self.csv_hash}"
+        return f"{self.handle}::{self.campaign_name}::{self.input_hash}"
 
     @classmethod
     def make(
-        cls, handle: str, campaign_name: str, csv_path: Path | str | None = None
+        cls, handle: str, campaign_name: str, input_path: Path | str | None = None
     ) -> "SessionKey":
         """
-        Build a SessionKey. If csv_path is missing or unreadable, fall back to a stable
-        placeholder hash for API-driven runs (no CSV input).
+        Build a SessionKey. If input_path is missing or unreadable, fall back to a stable
+        placeholder hash for API-driven runs (no file input).
         """
-        if csv_path is None:
-            csv_hash = "api-input"
+        if input_path is None:
+            input_hash = "api-input"
         else:
             try:
-                csv_hash = hash_file(csv_path)
+                input_hash = hash_file(input_path)
             except FileNotFoundError:
-                csv_hash = "api-input"
-        return cls(handle=handle, campaign_name=campaign_name, csv_hash=csv_hash)
+                input_hash = "api-input"
+        return cls(handle=handle, campaign_name=campaign_name, input_hash=input_hash)
 
     def as_filename_safe(self) -> str:
-        return f"{self.handle}--{self.campaign_name}--{self.csv_hash}"
+        return f"{self.handle}--{self.campaign_name}--{self.input_hash}"
 
 
 def hash_file(
@@ -88,7 +88,7 @@ def hash_file(
 ) -> str:
     """
     Compute a stable cryptographic hash of a file's contents.
-    Used to detect if the input CSV has changed → new campaign run.
+    Used to detect if the input file has changed → new campaign run.
     """
     path = Path(path)
     if not path.is_file():
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     session, _ = AccountSessionRegistry.get_or_create_from_path(
         handle=handle,
         campaign_name=CAMPAIGN_NAME,
-        csv_path=None,
+        input_path=None,
     )
 
     session.ensure_browser()  # ← this does everything
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     print("\nSession ready! Use session.page, session.context, etc.")
     print(f"   Handle   : {session.handle}")
     print(f"   Campaign : {session.campaign_name}")
-    print(f"   Input hash : {session.csv_hash}")
+    print(f"   Input hash : {session.key.input_hash}")
     print(f"   Key      : {session.key}")
     print("   Browser survives crash/reboot/Ctrl+C\n")
 

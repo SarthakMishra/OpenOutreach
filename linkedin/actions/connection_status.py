@@ -97,7 +97,7 @@ if __name__ == "__main__":
     key = SessionKey.make(
         handle=handle,
         campaign_name="test_status",
-        csv_path=None,
+        input_path=None,
     )
 
     public_identifier = "benjames01"
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     session, _ = AccountSessionRegistry.get_or_create_from_path(
         handle=key.handle,
         campaign_name=key.campaign_name,
-        csv_path=None,
+        input_path=None,
     )
 
     # Check status

@@ -22,7 +22,7 @@ def send_follow_up_message(
     session = AccountSessionRegistry.get_or_create(
         handle=key.handle,
         campaign_name=key.campaign_name,
-        csv_hash=key.csv_hash,
+        input_hash=key.input_hash,
     )
     status = get_connection_status(session, profile)
 

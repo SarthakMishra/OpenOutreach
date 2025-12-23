@@ -17,7 +17,7 @@ def scrape_profile(key: SessionKey, profile: dict):
     session = AccountSessionRegistry.get_or_create(
         handle=key.handle,
         campaign_name=key.campaign_name,
-        csv_hash=key.csv_hash,
+        input_hash=key.input_hash,
     )
 
     # ── Existing enrichment logic (100% unchanged) ──
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     key = SessionKey.make(
         handle=handle,
         campaign_name="test_profile",
-        csv_path=None,
+        input_path=None,
     )
 
     test_profile = {

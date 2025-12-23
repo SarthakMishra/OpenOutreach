@@ -35,7 +35,7 @@ class AccountSession:
         self.key = key
         self.handle = key.handle
         self.campaign_name = key.campaign_name
-        self.csv_hash = key.csv_hash
+        self.input_hash = key.input_hash
 
         self.account_cfg = get_account_config(self.handle)
         self.db = Database.from_handle(self.handle)

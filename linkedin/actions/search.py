@@ -169,7 +169,7 @@ if __name__ == "__main__":
     session, _ = AccountSessionRegistry.get_or_create_from_path(
         handle=handle,
         campaign_name="test_search",
-        csv_path=None,
+        input_path=None,
     )
 
     # Make sure browser is up

@@ -8,7 +8,7 @@ Base = declarative_base()
 
 
 class Profile(Base):
-    __tablename__ = 'profiles'
+    __tablename__ = "profiles"
 
     # USING public_identifier as primary key
     public_identifier = Column(String, primary_key=True)
@@ -20,9 +20,32 @@ class Profile(Base):
     data = Column(JSON, nullable=True)
 
     # Whether this profile has been sent to your backend / cloud / CRM
-    cloud_synced = Column(Boolean, default=False, server_default='false', nullable=False)
+    cloud_synced = Column(
+        Boolean, default=False, server_default="false", nullable=False
+    )
 
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     state = Column(String, nullable=False, default="discovered")
+
+
+class Account(Base):
+    __tablename__ = "accounts"
+
+    handle = Column(String, primary_key=True)
+    active = Column(Boolean, default=True, server_default="true", nullable=False)
+    proxy = Column(String, nullable=True)
+    daily_connections = Column(Integer, default=50, nullable=False)
+    daily_messages = Column(Integer, default=20, nullable=False)
+    username = Column(String, nullable=False)
+    password = Column(
+        String, nullable=False
+    )  # consider encryption/hashing in server layer
+    booking_link = Column(String, nullable=True)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )
