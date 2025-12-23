@@ -43,9 +43,12 @@ class Database:
     def _sync_all_unsynced_profiles(self):
         with self.get_session() as db_session:
             # Fixed: was filtering on non-existent `scraped` column
-            unsynced = db_session.query(Profile).filter_by(
-                cloud_synced=False
-            ).filter(Profile.profile.isnot([ProfileState.DISCOVERED.value])).all()
+            unsynced = (
+                db_session.query(Profile)
+                .filter_by(cloud_synced=False)
+                .filter(Profile.profile.isnot([ProfileState.DISCOVERED.value]))
+                .all()
+            )
 
             if not unsynced:
                 logger.info("All profiles already synced")

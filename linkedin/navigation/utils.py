@@ -6,25 +6,30 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from linkedin.conf import FIXTURE_PAGES_DIR, OPPORTUNISTIC_SCRAPING
 from linkedin.navigation.exceptions import SkipProfile
+from linkedin.sessions.account import AccountSession
 
 logger = logging.getLogger(__name__)
 
 
-def goto_page(session: "AccountSession",
-              action,
-              expected_url_pattern: str,
-              timeout: int = 10_000,
-              error_message: str = "",
-              to_scrape=True,
-              ):
+def goto_page(
+    session: "AccountSession",
+    action,
+    expected_url_pattern: str,
+    timeout: int = 10_000,
+    error_message: str = "",
+    to_scrape=True,
+):
     from linkedin.db.profiles import add_profile_urls
+
     page = session.page
     action()
     if not page:
         return
 
     try:
-        page.wait_for_url(lambda url: expected_url_pattern in unquote(url), timeout=timeout)
+        page.wait_for_url(
+            lambda url: expected_url_pattern in unquote(url), timeout=timeout
+        )
     except PlaywrightTimeoutError:
         pass  # we still continue and check URL below
 
@@ -32,7 +37,9 @@ def goto_page(session: "AccountSession",
 
     current = unquote(page.url)
     if expected_url_pattern not in current:
-        raise RuntimeError(f"{error_message} → expected '{expected_url_pattern}' | got '{current}'")
+        raise RuntimeError(
+            f"{error_message} → expected '{expected_url_pattern}' | got '{current}'"
+        )
 
     logger.debug("Navigated to %s", page.url)
     if OPPORTUNISTIC_SCRAPING:
@@ -40,7 +47,10 @@ def goto_page(session: "AccountSession",
             urls = _extract_in_urls(session)
             add_profile_urls(session, list(urls))
         except Exception as e:
-            logger.error(f"Failed to extract/save profile URLs after navigation: {e}", exc_info=True)
+            logger.error(
+                f"Failed to extract/save profile URLs after navigation: {e}",
+                exc_info=True,
+            )
 
 
 def _extract_in_urls(session):
@@ -58,16 +68,18 @@ def _extract_in_urls(session):
 
 
 def get_top_card(session):
-    top_card = session.page.locator('section:has(div.top-card-background-hero-image)')
+    top_card = session.page.locator("section:has(div.top-card-background-hero-image)")
 
     if top_card.count() == 0:
-        top_card = session.page.locator('section[data-member-id]')
+        top_card = session.page.locator("section[data-member-id]")
 
     if top_card.count() == 0:
-        top_card = session.page.locator('section.artdeco-card:has(> div.pv-top-card)')
+        top_card = session.page.locator("section.artdeco-card:has(> div.pv-top-card)")
 
     if top_card.count() == 0:
-        top_card = session.page.locator('section[data-member-id] >> div.pv-top-card').locator('..')
+        top_card = session.page.locator(
+            "section[data-member-id] >> div.pv-top-card"
+        ).locator("..")
 
     if top_card.count() == 0:
         top_card = session.page.locator('section:has(> div[class*="pv-top-card"])')
@@ -79,8 +91,8 @@ def get_top_card(session):
     return top_card.first  # there’s always only one
 
 
-def save_page(session: "AccountSession", profile: dict, ):
-    filepath = FIXTURE_PAGES_DIR / f"{profile.get("public_identifier")}.html"
+def save_page(session: "AccountSession", profile: dict):
+    filepath = FIXTURE_PAGES_DIR / f"{profile.get('public_identifier')}.html"
     html_content = session.page.content()
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(html_content)

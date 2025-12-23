@@ -5,8 +5,13 @@ import logging
 import random
 import time
 
-from linkedin.actions.profile import PlaywrightLinkedinAPI
-from linkedin.conf import get_account_config, MIN_DELAY, MAX_DELAY, OPPORTUNISTIC_SCRAPING
+from linkedin.api.client import PlaywrightLinkedinAPI
+from linkedin.conf import (
+    get_account_config,
+    MIN_DELAY,
+    MAX_DELAY,
+    OPPORTUNISTIC_SCRAPING,
+)
 from linkedin.navigation.login import init_playwright_session
 from linkedin.navigation.throttle import determine_batch_size
 from linkedin.sessions.registry import SessionKey
@@ -26,6 +31,7 @@ def human_delay(min, max):
 class AccountSession:
     def __init__(self, key: "SessionKey"):
         from linkedin.db.engine import Database
+
         self.key = key
         self.handle = key.handle
         self.campaign_name = key.campaign_name
@@ -33,7 +39,9 @@ class AccountSession:
 
         self.account_cfg = get_account_config(self.handle)
         self.db = Database.from_handle(self.handle)
-        self.db_session = self.db.get_session()  # one long-lived session per account run
+        self.db_session = (
+            self.db.get_session()
+        )  # one long-lived session per account run
 
         # Playwright objects – created on first access or after crash
         self.page = None
@@ -44,10 +52,16 @@ class AccountSession:
     def ensure_browser(self):
         """Launch or recover browser + login if needed. Call before using .page"""
         if not self.page or self.page.is_closed():
-            logger.info("Launching/recovering browser for %s – %s", self.handle, self.campaign_name)
+            logger.info(
+                "Launching/recovering browser for %s – %s",
+                self.handle,
+                self.campaign_name,
+            )
             init_playwright_session(session=self, handle=self.handle)
 
-    def wait(self, min_delay=MIN_DELAY, max_delay=MAX_DELAY, to_scrape=OPPORTUNISTIC_SCRAPING):
+    def wait(
+        self, min_delay=MIN_DELAY, max_delay=MAX_DELAY, to_scrape=OPPORTUNISTIC_SCRAPING
+    ):
         if not to_scrape:
             human_delay(min_delay, max_delay)
             self.page.wait_for_load_state("load")
@@ -65,6 +79,7 @@ class AccountSession:
             return
 
         from linkedin.db.profiles import save_scraped_profile
+
         min_api_delay = max(min_delay / len(urls), MIN_API_DELAY)
         max_api_delay = max(max_delay / len(urls), MAX_API_DELAY)
         api = PlaywrightLinkedinAPI(session=self)
@@ -73,7 +88,9 @@ class AccountSession:
             human_delay(min_api_delay, max_api_delay)
             profile, data = api.get_profile(profile_url=url)
             save_scraped_profile(self, url, profile, data)
-            logger.debug(f"Auto-scraped → {profile.get('full_name')} – {url}") if profile else None
+            logger.debug(
+                f"Auto-scraped → {profile.get('full_name')} – {url}"
+            ) if profile else None
 
     def close(self):
         if self.context:
@@ -95,7 +112,7 @@ class AccountSession:
     def __del__(self):
         try:
             self.close()
-        except:
+        except Exception:
             pass
 
     def __repr__(self) -> str:
