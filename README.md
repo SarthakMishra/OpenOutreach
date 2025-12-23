@@ -127,8 +127,8 @@ If `API_KEY` environment variable is not set, authentication is disabled (develo
 - **`connect`** - Send connection request (with optional note)
 - **`direct_message`** - Send direct message to connected profile
 - **`post_react`** - React to LinkedIn post
-- **`post_comment`** - Comment on LinkedIn post (placeholder)
-- **`inmail`** - Send InMail (placeholder)
+- **`post_comment`** - Comment on LinkedIn post
+- **`inmail`** - Send InMail
 
 ---
 

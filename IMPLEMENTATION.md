@@ -2,9 +2,6 @@
 
 This document tracks **remaining work** for the FastAPI-based automation server.
 
-**Status**: All touchpoint implementations are complete. Remaining work focuses on:
-1. E2E test suite for validation
-
 ---
 
 ## 7.1) Minimal E2E test strategy (UI automation) for the FastAPI job runner
