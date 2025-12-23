@@ -1,10 +1,8 @@
-# local.yml
-
 services:
   app:
     build:
       context: .
-      dockerfile: ./compose/linkedin/Dockerfile
+      dockerfile: ./Dockerfile
       args:
         - BUILD_ENV=local
     env_file:
@@ -13,4 +11,5 @@ services:
     volumes:
       - .:/app
     ports:
-      - "5900:5900"
+      - "8000:8000" # FastAPI server
+      - "5900:5900" # VNC for debugging browser automation

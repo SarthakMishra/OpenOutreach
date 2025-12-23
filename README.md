@@ -1,5 +1,3 @@
-![OpenOutreach Logo](docs/logo.png)
-
 This is a **work-in-progress** API server implementation based on the [OpenOutreach](https://github.com/eracle/OpenOutreach) project. The API provides programmatic access to LinkedIn automation capabilities through a FastAPI-based REST interface.
 
 **Note:** This implementation is actively being developed and may have incomplete features or breaking changes.
@@ -137,13 +135,6 @@ If `API_KEY` environment variable is not set, authentication is disabled (develo
 - **`post_react`** - React to LinkedIn post (placeholder)
 - **`post_comment`** - Comment on LinkedIn post (placeholder)
 - **`inmail`** - Send InMail (placeholder)
-
----
-
-## 📖 Documentation
-
-- [Implementation Plan](./IMPLEMENTATION.md) - Detailed architecture and roadmap
-- [Docker Installation](./docs/docker.md) - Containerized setup
 
 ---
 

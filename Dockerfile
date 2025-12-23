@@ -18,11 +18,11 @@ RUN pip install uv
 COPY ./requirements /requirements
 RUN uv pip install --system -r /requirements/${BUILD_ENV}.txt
 
-# ← ADD THIS LINE (and only this line)
+# Install Playwright browsers
 RUN playwright install --with-deps chromium
 
 # Copy necessary startup scripts
-COPY ./compose/linkedin/start /start
+COPY ./scripts/start /start
 RUN sed -i 's/\r$//g' /start && chmod +x /start
 
 # Copy the entire application code to the app directory
@@ -30,3 +30,4 @@ COPY . ${APP_HOME}
 
 # Set the working directory
 WORKDIR ${APP_HOME}
+
