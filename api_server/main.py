@@ -19,43 +19,26 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown events."""
     # Startup
-    from apscheduler.triggers.cron import CronTrigger
+    from api_server.services.scheduler import start_scheduler
+    from api_server.services.worker import start_worker
 
-    # Load existing schedules and add them to scheduler
-    from api_server.db.engine import get_session
-    from api_server.db.models import Schedule
-    from api_server.services.scheduler import _execute_scheduled_run, get_scheduler
+    # Start background worker for pending runs
+    start_worker()
 
-    session = get_session()
-    try:
-        schedules = session.query(Schedule).filter(Schedule.active == "active").all()
-        scheduler = get_scheduler()
-
-        for schedule in schedules:
-            try:
-                scheduler.add_job(
-                    func=_execute_scheduled_run,
-                    trigger=CronTrigger.from_crontab(schedule.cron),  # type: ignore
-                    args=[schedule.schedule_id],  # type: ignore
-                    id=schedule.schedule_id,  # type: ignore
-                    replace_existing=True,
-                )
-                logger.info("Restored schedule %s", schedule.schedule_id)  # type: ignore
-            except Exception as e:
-                logger.error("Failed to restore schedule %s: %s", schedule.schedule_id, e)  # type: ignore
-    finally:
-        session.close()
+    # Start scheduler for due schedules
+    start_scheduler()
 
     logger.info("API server started")
 
     yield
 
     # Shutdown
-    from api_server.services.scheduler import _scheduler
+    from api_server.services.scheduler import stop_scheduler
+    from api_server.services.worker import stop_worker
 
-    if _scheduler:
-        _scheduler.shutdown()
-        logger.info("Scheduler stopped")
+    stop_scheduler()
+    stop_worker()
+    logger.info("Background services stopped")
 
 
 app = FastAPI(

@@ -23,7 +23,8 @@ class ScheduleResponse(BaseModel):
     handle: str
     touchpoint_type: TouchpointType
     cron: str
-    active: str  # "active" or "paused"
+    next_run_at: Optional[datetime] = None
+    active: bool  # True if active, False if paused
     tags: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: datetime

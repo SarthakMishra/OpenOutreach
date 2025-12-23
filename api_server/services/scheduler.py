@@ -1,29 +1,30 @@
 # api_server/services/scheduler.py
 import logging
+import threading
 import uuid
+from datetime import datetime, timezone
 from typing import Any, Dict
 
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
+from croniter import croniter
 
 from api_server.db.engine import get_session
 from api_server.db.models import Schedule
-from api_server.services.executor import create_run, execute_run
+from api_server.services.executor import create_run
 
 logger = logging.getLogger(__name__)
 
-# Global scheduler instance
-_scheduler: BackgroundScheduler | None = None
+# Global scheduler thread
+_scheduler_thread: threading.Thread | None = None
+_scheduler_running = False
+_scheduler_lock = threading.Lock()
 
 
-def get_scheduler() -> BackgroundScheduler:
-    """Get or create the global scheduler instance."""
-    global _scheduler
-    if _scheduler is None:
-        _scheduler = BackgroundScheduler()
-        _scheduler.start()
-        logger.info("Scheduler started")
-    return _scheduler
+def _calculate_next_run(cron: str, from_time: datetime | None = None) -> datetime:
+    """Calculate next run time from cron expression."""
+    if from_time is None:
+        from_time = datetime.now(timezone.utc)
+    iter = croniter(cron, from_time)
+    return iter.get_next(datetime)
 
 
 def create_schedule(
@@ -40,6 +41,9 @@ def create_schedule(
     # Extract touchpoint type from input
     touchpoint_type = touchpoint_input.get("type", "unknown")
 
+    # Calculate next run time
+    next_run_at = _calculate_next_run(cron)
+
     session = get_session()
     try:
         schedule = Schedule(
@@ -48,51 +52,112 @@ def create_schedule(
             touchpoint_type=touchpoint_type,
             touchpoint_input=touchpoint_input,
             cron=cron,
-            active="active",
+            next_run_at=next_run_at,
+            active=True,
             tags=tags,
         )
         session.add(schedule)
         session.commit()
 
-        # Add job to scheduler
-        scheduler = get_scheduler()
-        scheduler.add_job(
-            func=_execute_scheduled_run,
-            trigger=CronTrigger.from_crontab(cron),
-            args=[schedule_id],
-            id=schedule_id,
-            replace_existing=True,
+        logger.info(
+            "Created schedule %s for handle %s with cron %s (next run: %s)",
+            schedule_id,
+            handle,
+            cron,
+            next_run_at,
         )
-
-        logger.info("Created schedule %s for handle %s with cron %s", schedule_id, handle, cron)
         return schedule_id
     finally:
         session.close()
 
 
-def _execute_scheduled_run(schedule_id: str) -> None:
-    """Execute a scheduled run."""
+def _process_due_schedules() -> None:
+    """Process schedules that are due for execution."""
     session = get_session()
     try:
-        schedule = session.get(Schedule, schedule_id)
-        if not schedule:
-            logger.error("Schedule %s not found", schedule_id)
-            return
-
-        if schedule.active != "active":
-            logger.debug("Schedule %s is not active, skipping", schedule_id)
-            return
-
-        # Create and execute run
-        run_id = create_run(
-            handle=schedule.handle,
-            touchpoint_input=schedule.touchpoint_input,
-            tags=schedule.tags,
+        now = datetime.now(timezone.utc)
+        # Find schedules that are due and active
+        due_schedules = (
+            session.query(Schedule)
+            .filter(Schedule.active == True)  # noqa: E712
+            .filter(Schedule.next_run_at <= now)
+            .all()
         )
-        execute_run(run_id)
-        logger.info("Executed scheduled run %s for schedule %s", run_id, schedule_id)
+
+        for schedule in due_schedules:
+            try:
+                # Create run for this schedule
+                run_id = create_run(
+                    handle=schedule.handle,  # type: ignore
+                    touchpoint_input=schedule.touchpoint_input,  # type: ignore
+                    tags=schedule.tags,  # type: ignore
+                )
+
+                # Calculate next run time
+                next_run_at = _calculate_next_run(schedule.cron, now)  # type: ignore
+                schedule.next_run_at = next_run_at  # type: ignore
+                session.commit()
+
+                logger.info(
+                    "Created scheduled run %s for schedule %s (next run: %s)",
+                    run_id,
+                    schedule.schedule_id,  # type: ignore
+                    next_run_at,
+                )
+            except Exception as e:
+                logger.error("Failed to process schedule %s: %s", schedule.schedule_id, e, exc_info=True)  # type: ignore
+                session.rollback()
     finally:
         session.close()
+
+
+def _scheduler_worker() -> None:
+    """Background worker that polls for due schedules."""
+    logger.info("Scheduler worker started")
+    while _scheduler_running:
+        try:
+            _process_due_schedules()
+        except Exception as e:
+            logger.error("Error in scheduler worker: %s", e, exc_info=True)
+
+        # Sleep for 30 seconds before next poll
+        import time
+
+        for _ in range(30):
+            if not _scheduler_running:
+                break
+            time.sleep(1)
+
+    logger.info("Scheduler worker stopped")
+
+
+def start_scheduler() -> None:
+    """Start the scheduler worker thread."""
+    global _scheduler_thread, _scheduler_running
+
+    with _scheduler_lock:
+        if _scheduler_running:
+            logger.warning("Scheduler already running")
+            return
+
+        _scheduler_running = True
+        _scheduler_thread = threading.Thread(target=_scheduler_worker, daemon=True)
+        _scheduler_thread.start()
+        logger.info("Scheduler started")
+
+
+def stop_scheduler() -> None:
+    """Stop the scheduler worker thread."""
+    global _scheduler_running
+
+    with _scheduler_lock:
+        if not _scheduler_running:
+            return
+
+        _scheduler_running = False
+        if _scheduler_thread:
+            _scheduler_thread.join(timeout=5.0)
+        logger.info("Scheduler stopped")
 
 
 def get_schedule(schedule_id: str) -> Schedule | None:
@@ -117,21 +182,13 @@ def list_schedules(handle: str | None = None) -> list[Schedule]:
 
 
 def delete_schedule(schedule_id: str) -> bool:
-    """Delete a schedule and remove its job from scheduler."""
+    """Delete a schedule."""
     session = get_session()
     try:
         schedule = session.get(Schedule, schedule_id)
         if not schedule:
             return False
 
-        # Remove job from scheduler
-        scheduler = get_scheduler()
-        try:
-            scheduler.remove_job(schedule_id)
-        except Exception as e:
-            logger.warning("Failed to remove job %s from scheduler: %s", schedule_id, e)
-
-        # Delete from database
         session.delete(schedule)
         session.commit()
         logger.info("Deleted schedule %s", schedule_id)
@@ -148,15 +205,8 @@ def pause_schedule(schedule_id: str) -> bool:
         if not schedule:
             return False
 
-        schedule.active = "paused"
+        schedule.active = False  # type: ignore
         session.commit()
-
-        # Pause job in scheduler
-        scheduler = get_scheduler()
-        try:
-            scheduler.pause_job(schedule_id)
-        except Exception as e:
-            logger.warning("Failed to pause job %s in scheduler: %s", schedule_id, e)
 
         logger.info("Paused schedule %s", schedule_id)
         return True
@@ -172,15 +222,11 @@ def resume_schedule(schedule_id: str) -> bool:
         if not schedule:
             return False
 
-        schedule.active = "active"
+        schedule.active = True  # type: ignore
+        # Recalculate next_run_at if it's in the past
+        if schedule.next_run_at and schedule.next_run_at < datetime.now(timezone.utc):  # type: ignore
+            schedule.next_run_at = _calculate_next_run(schedule.cron)  # type: ignore
         session.commit()
-
-        # Resume job in scheduler
-        scheduler = get_scheduler()
-        try:
-            scheduler.resume_job(schedule_id)
-        except Exception as e:
-            logger.warning("Failed to resume job %s in scheduler: %s", schedule_id, e)
 
         logger.info("Resumed schedule %s", schedule_id)
         return True

@@ -38,6 +38,7 @@ def create_schedule_endpoint(request: ScheduleCreateRequest, api_key: str = Depe
         handle=schedule.handle,  # type: ignore
         touchpoint_type=TouchpointType(schedule.touchpoint_type),  # type: ignore
         cron=schedule.cron,  # type: ignore
+        next_run_at=schedule.next_run_at,  # type: ignore
         active=schedule.active,  # type: ignore
         tags=schedule.tags,  # type: ignore
         created_at=schedule.created_at,  # type: ignore

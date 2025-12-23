@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from api_server.auth import verify_api_key
 from api_server.schemas.runs import RunCreateRequest, RunListResponse, RunResponse
-from api_server.services.executor import create_run, execute_run, get_run, list_runs
+from api_server.services.executor import create_run, get_run, list_runs
 from linkedin.touchpoints.models import TouchpointType
 
 router = APIRouter()
@@ -27,9 +27,11 @@ def create_run_endpoint(request: RunCreateRequest, api_key: str = Depends(verify
         tags=request.tags,
     )
 
-    # Execute if not dry run
+    # Execute if not dry run (background worker will pick it up)
     if not request.dry_run:
-        execute_run(run_id_db)
+        # Don't execute immediately - let background worker handle it
+        # This ensures proper queuing and account locking
+        pass
 
     # Return run
     run = get_run(run_id_db)
