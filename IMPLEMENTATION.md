@@ -23,7 +23,7 @@ The current `tests/` suite is mostly unit tests (e.g., Voyager parsing). For UI 
   - `test_runs_message.py`
   - `test_runs_post_react.py`
   - `test_runs_post_comment.py`
-  - `test_runs_inmail.py` (skipped unless InMail available)
+  - `test_runs_inmail.py`
 
 ### Markers (pytest)
 

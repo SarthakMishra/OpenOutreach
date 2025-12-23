@@ -4,24 +4,6 @@ This is a **work-in-progress** API server implementation based on the [OpenOutre
 
 **Note:** This implementation is actively being developed and may have incomplete features or breaking changes.
 
-### 🏗️ Architecture
-
-The API server provides a clean separation between:
-
-- **API Layer** (`api_server/`): FastAPI endpoints, request/response schemas, authentication
-- **Touchpoints** (`linkedin/touchpoints/`): Atomic automation actions (enrich, connect, message, visit, etc.)
-- **Actions** (`linkedin/actions/`): Low-level LinkedIn browser automation
-- **Database**: Separate databases for server state (runs, schedules) and per-account profile data
-
-### Key Features
-
-- **No Workflows**: Each API call executes one atomic LinkedIn action
-- **Run tracking**: All executions logged to database with full audit trail
-- **Scheduling**: Cron-based recurring touchpoint execution
-- **Account locking**: Prevents concurrent executions per account
-- **Background workers**: Automatic processing of queued runs
-
----
 
 ## 🚀 Quick Start
 
@@ -50,7 +32,6 @@ docker compose up
 
 Server runs on `http://localhost:8000` by default. VNC access for browser debugging is available on port `5900`.
 
----
 
 ## 📡 API Endpoints
 
@@ -92,6 +73,14 @@ Server runs on `http://localhost:8000` by default. VNC access for browser debugg
     "tags": {}
   }
   ```
+  #### Available Touchpoints
+  - **`profile_enrich`** - Enrich LinkedIn profile data
+  - **`profile_visit`** - Visit profile with configurable duration/scrolling
+  - **`connect`** - Send connection request (with optional note)
+  - **`direct_message`** - Send direct message to connected profile
+  - **`post_react`** - React to LinkedIn post
+  - **`post_comment`** - Comment on LinkedIn post
+  - **`inmail`** - Send InMail
 - `GET /api/v1/runs/{run_id}` - Get run status and results
 - `GET /api/v1/runs` - List runs (filter by `handle`, `status`, pagination)
 
@@ -118,25 +107,11 @@ X-API-Key: your-secret-key
 
 If `API_KEY` environment variable is not set, authentication is disabled (development mode).
 
----
-
-## 🎯 Available Touchpoints
-
-- **`profile_enrich`** - Enrich LinkedIn profile data
-- **`profile_visit`** - Visit profile with configurable duration/scrolling
-- **`connect`** - Send connection request (with optional note)
-- **`direct_message`** - Send direct message to connected profile
-- **`post_react`** - React to LinkedIn post
-- **`post_comment`** - Comment on LinkedIn post
-- **`inmail`** - Send InMail
-
----
 
 ## ⚖️ License
 
 [GNU GPLv3](https://www.gnu.org/licenses/gpl-3.0) — see [LICENCE.md](LICENCE.md)
 
----
 
 ## 📜 Legal Disclaimer
 
