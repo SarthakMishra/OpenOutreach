@@ -27,6 +27,12 @@ def create_account(request: AccountCreateRequest, api_key: str = Depends(verify_
             daily_connections=account.daily_connections,  # type: ignore
             daily_messages=account.daily_messages,  # type: ignore
             booking_link=account.booking_link,  # type: ignore
+            consecutive_failures=account.consecutive_failures or 0,  # type: ignore
+            paused=account.paused or False,  # type: ignore
+            paused_reason=account.paused_reason,  # type: ignore
+            connections_today=account.connections_today or 0,  # type: ignore
+            messages_today=account.messages_today or 0,  # type: ignore
+            posts_today=account.posts_today or 0,  # type: ignore
             created_at=account.created_at,  # type: ignore
             updated_at=account.updated_at,  # type: ignore
         )

@@ -18,6 +18,7 @@ class Run(Base):
     status = Column(String, nullable=False, index=True)  # "pending", "running", "completed", "failed"
     result = Column(JSON, nullable=True)  # Touchpoint output/result
     error = Column(Text, nullable=True)  # Error message if failed
+    error_screenshot = Column(String, nullable=True)  # Path to screenshot on failure
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     duration_ms = Column(Integer, nullable=True)

@@ -1,3 +1,5 @@
+# OpenOutreach Server
+
 This is a **work-in-progress** API server implementation based on the [OpenOutreach](https://github.com/eracle/OpenOutreach) project. The API provides programmatic access to LinkedIn automation capabilities through a FastAPI-based REST interface.
 
 **Note:** This implementation is actively being developed and may have incomplete features or breaking changes.

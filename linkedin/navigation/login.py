@@ -73,6 +73,15 @@ def init_playwright_session(session: "AccountSession", handle: str):
     session.page, session.context, session.browser, session.playwright = build_playwright(storage_state=storage_state)
     page = session.page  # Capture for type narrowing
 
+    # Set up console logging for observability
+    try:
+        from api_server.services.observability import setup_console_logging
+
+        setup_console_logging(session)
+    except ImportError:
+        # If observability module not available, continue without it
+        pass
+
     if not storage_state:
         playwright_login(session)
         state_file.parent.mkdir(parents=True, exist_ok=True)

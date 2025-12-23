@@ -20,14 +20,10 @@ class Profile(Base):
     data = Column(JSON, nullable=True)
 
     # Whether this profile has been sent to your backend / cloud / CRM
-    cloud_synced = Column(
-        Boolean, default=False, server_default="false", nullable=False
-    )
+    cloud_synced = Column(Boolean, default=False, server_default="false", nullable=False)
 
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
-    updated_at = Column(
-        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
-    )
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
     state = Column(String, nullable=False, default="discovered")
 
@@ -41,11 +37,16 @@ class Account(Base):
     daily_connections = Column(Integer, default=50, nullable=False)
     daily_messages = Column(Integer, default=20, nullable=False)
     username = Column(String, nullable=False)
-    password = Column(
-        String, nullable=False
-    )  # consider encryption/hashing in server layer
+    password = Column(String, nullable=False)  # consider encryption/hashing in server layer
     booking_link = Column(String, nullable=True)
+    # Circuit breaker fields
+    consecutive_failures = Column(Integer, default=0, server_default="0", nullable=False)
+    paused = Column(Boolean, default=False, server_default="false", nullable=False)
+    paused_reason = Column(String, nullable=True)  # Reason for pausing (e.g., "too_many_failures")
+    # Quota tracking (reset daily)
+    connections_today = Column(Integer, default=0, server_default="0", nullable=False)
+    messages_today = Column(Integer, default=0, server_default="0", nullable=False)
+    posts_today = Column(Integer, default=0, server_default="0", nullable=False)
+    quota_reset_at = Column(DateTime, nullable=True)  # When to reset daily quotas
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
-    updated_at = Column(
-        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
-    )
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)

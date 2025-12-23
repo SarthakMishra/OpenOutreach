@@ -27,6 +27,14 @@ class AccountResponse(BaseModel):
     daily_connections: int
     daily_messages: int
     booking_link: Optional[str] = None
+    # Circuit breaker fields
+    consecutive_failures: int = 0
+    paused: bool = False
+    paused_reason: Optional[str] = None
+    # Quota tracking
+    connections_today: int = 0
+    messages_today: int = 0
+    posts_today: int = 0
     created_at: datetime
     updated_at: datetime
 
