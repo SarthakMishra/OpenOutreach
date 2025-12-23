@@ -45,7 +45,7 @@ The database contains two main tables: `profiles` and `campaign_runs`.
 | :--- | :--- | :--- |
 | `name` | TEXT | PRIMARY KEY. The user-defined name of the campaign. |
 | `handle` | TEXT | PRIMARY KEY. The handle of the account running the campaign. |
-| `input_hash` | TEXT | PRIMARY KEY. A hash of the input (e.g., CSV file) to uniquely identify the run. |
+| `run_id` | TEXT | PRIMARY KEY. A unique identifier (UUID) for the API run to uniquely identify the execution. |
 | `run_at` | DATETIME | Timestamp of when the campaign was started. |
 | `short_id` | TEXT | A short, unique, human-readable ID for the campaign run. |
 | `total_profiles` | INTEGER | The total number of profiles in the campaign. |

@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import random
 import time
+from typing import TYPE_CHECKING
 
 from linkedin.api.client import PlaywrightLinkedinAPI
 from linkedin.conf import (
@@ -15,6 +16,9 @@ from linkedin.conf import (
 from linkedin.navigation.login import init_playwright_session
 from linkedin.navigation.throttle import determine_batch_size
 from linkedin.sessions.registry import SessionKey
+
+if TYPE_CHECKING:
+    from playwright.sync_api import Browser, BrowserContext, Page, Playwright
 
 logger = logging.getLogger(__name__)
 
@@ -35,19 +39,17 @@ class AccountSession:
         self.key = key
         self.handle = key.handle
         self.campaign_name = key.campaign_name
-        self.input_hash = key.input_hash
+        self.run_id = key.run_id
 
         self.account_cfg = get_account_config(self.handle)
         self.db = Database.from_handle(self.handle)
-        self.db_session = (
-            self.db.get_session()
-        )  # one long-lived session per account run
+        self.db_session = self.db.get_session()  # one long-lived session per account run
 
         # Playwright objects – created on first access or after crash
-        self.page = None
-        self.context = None
-        self.browser = None
-        self.playwright = None
+        self.page: Page | None = None
+        self.context: BrowserContext | None = None
+        self.browser: Browser | None = None
+        self.playwright: Playwright | None = None
 
     def ensure_browser(self):
         """Launch or recover browser + login if needed. Call before using .page"""
@@ -59,9 +61,8 @@ class AccountSession:
             )
             init_playwright_session(session=self, handle=self.handle)
 
-    def wait(
-        self, min_delay=MIN_DELAY, max_delay=MAX_DELAY, to_scrape=OPPORTUNISTIC_SCRAPING
-    ):
+    def wait(self, min_delay=MIN_DELAY, max_delay=MAX_DELAY, to_scrape=OPPORTUNISTIC_SCRAPING):
+        assert self.page is not None, "page must be initialized via ensure_browser()"
         if not to_scrape:
             human_delay(min_delay, max_delay)
             self.page.wait_for_load_state("load")
@@ -87,10 +88,9 @@ class AccountSession:
         for url in urls:
             human_delay(min_api_delay, max_api_delay)
             profile, data = api.get_profile(profile_url=url)
-            save_scraped_profile(self, url, profile, data)
-            logger.debug(
-                f"Auto-scraped → {profile.get('full_name')} – {url}"
-            ) if profile else None
+            if profile:
+                save_scraped_profile(self, url, profile, data)
+                logger.debug(f"Auto-scraped → {profile.get('full_name')} – {url}")
 
     def close(self):
         if self.context:

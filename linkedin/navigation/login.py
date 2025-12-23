@@ -8,7 +8,7 @@ from playwright_stealth import Stealth
 from linkedin.conf import get_account_config
 from linkedin.navigation.utils import goto_page
 from linkedin.sessions.account import AccountSession
-from linkedin.sessions.registry import AccountSessionRegistry
+from linkedin.sessions.registry import AccountSessionRegistry, SessionKey
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,7 @@ SELECTORS = {
 
 
 def playwright_login(session: "AccountSession"):
+    assert session.page is not None, "page must be initialized via ensure_browser()"
     page = session.page
     config = get_account_config(session.handle)
     logger.info("\033[36mFresh login sequence starting for @%s\033[0m", session.handle)
@@ -69,9 +70,8 @@ def init_playwright_session(session: "AccountSession", handle: str):
     if storage_state:
         logger.info("Devouring saved cookies → %s", state_file)
 
-    session.page, session.context, session.browser, session.playwright = (
-        build_playwright(storage_state=storage_state)
-    )
+    session.page, session.context, session.browser, session.playwright = build_playwright(storage_state=storage_state)
+    page = session.page  # Capture for type narrowing
 
     if not storage_state:
         playwright_login(session)
@@ -81,7 +81,7 @@ def init_playwright_session(session: "AccountSession", handle: str):
     else:
         goto_page(
             session,
-            action=lambda: session.page.goto(LINKEDIN_FEED_URL),
+            action=lambda: page.goto(LINKEDIN_FEED_URL),
             expected_url_pattern="/feed",
             timeout=30_000,
             error_message="Saved session invalid",
@@ -106,16 +106,21 @@ if __name__ == "__main__":
         print("Usage: python -m linkedin.navigation.login <handle>")
         sys.exit(1)
 
-    handle = sys.argv[1]
+    import uuid
 
-    session, key = AccountSessionRegistry.get_or_create_from_path(
+    handle = sys.argv[1]
+    run_id = str(uuid.uuid4())
+    key = SessionKey(handle=handle, campaign_name="test_message", run_id=run_id)
+
+    session, _ = AccountSessionRegistry.get_or_create_for_run(
         handle=handle,
         campaign_name="test_message",
-        input_path=None,
+        run_id=run_id,
     )
 
     session.ensure_browser()
 
     init_playwright_session(session=session, handle=handle)
     print("Logged in! Close browser manually.")
+    assert session.page is not None, "page must be initialized via ensure_browser()"
     session.page.pause()

@@ -22,7 +22,7 @@ def send_follow_up_message(
     session = AccountSessionRegistry.get_or_create(
         handle=key.handle,
         campaign_name=key.campaign_name,
-        input_hash=key.input_hash,
+        run_id=key.run_id,
     )
     status = get_connection_status(session, profile)
 
@@ -46,9 +46,8 @@ def send_follow_up_message(
     return MessageStatus.SENT if success else MessageStatus.SKIPPED
 
 
-def _send_msg_pop_up(
-    session: "AccountSession", profile: Dict[str, Any], message: str
-) -> bool:
+def _send_msg_pop_up(session: "AccountSession", profile: Dict[str, Any], message: str) -> bool:
+    assert session.page is not None, "page must be initialized via ensure_browser()"
     session.wait()
     page = session.page
     public_identifier = profile.get("public_identifier")
@@ -68,9 +67,7 @@ def _send_msg_pop_up(
 
         session.wait()
 
-        input_area = page.locator(
-            'div[class*="msg-form__contenteditable"]:visible'
-        ).first
+        input_area = page.locator('div[class*="msg-form__contenteditable"]:visible').first
 
         try:
             input_area.fill(message, timeout=10000)
@@ -78,16 +75,12 @@ def _send_msg_pop_up(
         except Exception:
             logger.debug("fill() failed → using clipboard paste")
             input_area.click()
-            page.evaluate(
-                f"""() => navigator.clipboard.writeText(`{message.replace("`", "\\`")}`)"""
-            )
+            page.evaluate(f"""() => navigator.clipboard.writeText(`{message.replace("`", "\\`")}`)""")
             session.wait()
             input_area.press("ControlOrMeta+V")
             session.wait()
 
-        send_btn = page.locator(
-            'button[type="submit"][class*="msg-form"]:visible'
-        ).first
+        send_btn = page.locator('button[type="submit"][class*="msg-form"]:visible').first
         send_btn.click(force=True)
         session.wait(4, 5)
 
@@ -103,33 +96,30 @@ def _send_msg_pop_up(
 
 
 def _send_message(session: "AccountSession", profile: Dict[str, Any], message: str):
+    assert session.page is not None, "page must be initialized via ensure_browser()"
+    page = session.page
     full_name = profile.get("full_name")
     goto_page(
         session,
-        action=lambda: session.page.goto(LINKEDIN_MESSAGING_URL),
+        action=lambda: page.goto(LINKEDIN_MESSAGING_URL),
         expected_url_pattern="/messaging",
         timeout=30_000,
         error_message="Error opening messaging",
     )
     try:
         # Search person
-        session.page.locator('input[class^="msg-connections"]').type(
-            full_name, delay=50
-        )
+        if full_name:
+            session.page.locator('input[class^="msg-connections"]').type(full_name, delay=50)
         session.wait(0.5, 1)
 
-        item = session.page.locator(
-            'div[class*="msg-connections-typeahead__search-result-row"]'
-        ).first
+        item = session.page.locator('div[class*="msg-connections-typeahead__search-result-row"]').first
         session.wait(0.5, 1)
 
         # Scroll into view + click (very reliable on LinkedIn)
         item.scroll_into_view_if_needed()
         item.click(delay=200)  # small delay between mousedown/mouseup = very human
 
-        session.page.locator('div[class^="msg-form__contenteditable"]').type(
-            message, delay=10
-        )
+        session.page.locator('div[class^="msg-form__contenteditable"]').type(message, delay=10)
 
         session.page.locator('button[class^="msg-form__send-button"]').click(delay=200)
         session.wait(0.5, 1)
@@ -154,14 +144,16 @@ if __name__ == "__main__":
         print("Usage: python -m linkedin.actions.message <handle>")
         sys.exit(1)
 
+    import uuid
+
     handle = sys.argv[1]
+    run_id = str(uuid.uuid4())
+    key = SessionKey(handle=handle, campaign_name="test_message", run_id=run_id)
 
-    key = SessionKey.make(handle=handle, campaign_name="test_message", csv_path=None)
-
-    session, _ = AccountSessionRegistry.get_or_create_from_path(
+    session, _ = AccountSessionRegistry.get_or_create_for_run(
         handle=handle,
         campaign_name="test_message",
-        csv_path=None,
+        run_id=run_id,
     )
     session.ensure_browser()
 

@@ -18,6 +18,7 @@ DISTANCE_TO_DEGREE: Dict[str, Optional[int]] = {
 # Internal dataclasses (only used for validation & structure)
 # ======================
 
+
 @dataclass
 class Date:
     year: Optional[int] = None
@@ -76,13 +77,10 @@ class LinkedInProfile:
 # Private helpers
 # ======================
 
+
 def _resolve_references(data: dict) -> Dict[str, dict]:
     """Build urn → entity lookup from 'included' array."""
-    return {
-        entity.get("entityUrn"): entity
-        for entity in data.get("included", [])
-        if entity.get("entityUrn")
-    }
+    return {entity.get("entityUrn"): entity for entity in data.get("included", []) if entity.get("entityUrn")}
 
 
 def _resolve_star_field(entity: dict, urn_map: Dict[str, dict], field_name: str) -> Any:
@@ -92,7 +90,8 @@ def _resolve_star_field(entity: dict, urn_map: Dict[str, dict], field_name: str)
         return None
     if isinstance(value, list):
         return [urn_map.get(urn) for urn in value if urn_map.get(urn)]
-    return urn_map.get(value)
+    resolved = urn_map.get(value)
+    return resolved if isinstance(resolved, dict) else None
 
 
 def _date_from_raw(raw: Optional[dict]) -> Optional[Date]:
@@ -136,7 +135,9 @@ def _enrich_education(edu: dict, urn_map: Dict[str, dict]) -> Education:
     )
 
 
-def _extract_connection_info(profile_entity: dict, urn_map: Dict[str, dict]) -> tuple[Optional[str], Optional[int]]:
+def _extract_connection_info(
+    profile_entity: dict, urn_map: Dict[str, dict]
+) -> tuple[Optional[ConnectionDistance], Optional[int]]:
     member_rel_urn = profile_entity.get("*memberRelationship")
     if not member_rel_urn:
         return None, None
@@ -154,8 +155,9 @@ def _extract_connection_info(profile_entity: dict, urn_map: Dict[str, dict]) -> 
 
     if "noConnection" in union:
         distance_str = union["noConnection"].get("memberDistance")
-        degree = DISTANCE_TO_DEGREE.get(distance_str)
-        return distance_str, degree
+        if distance_str in ("DISTANCE_1", "DISTANCE_2", "DISTANCE_3", "OUT_OF_NETWORK"):
+            degree = DISTANCE_TO_DEGREE.get(distance_str)
+            return distance_str, degree  # type: ignore
 
     return None, None
 
@@ -164,9 +166,10 @@ def _extract_connection_info(profile_entity: dict, urn_map: Dict[str, dict]) -> 
 # Public function – returns plain dict
 # ======================
 
+
 def parse_linkedin_voyager_response(
-        json_response: dict,
-        public_identifier: Optional[str] = None,
+    json_response: dict,
+    public_identifier: Optional[str] = None,
 ) -> dict:
     """
     Parse a full LinkedIn Voyager profile response and return a clean dictionary.
@@ -237,18 +240,27 @@ def parse_linkedin_voyager_response(
                     educations.append(_enrich_education(edu, urn_map))
 
     # Assemble data for dataclass validation
-    profile_data = {
-        "urn": profile_entity["entityUrn"],
-        "first_name": first_name,
-        "last_name": last_name,
-        "full_name": f"{first_name} {last_name}".strip() or None,
+    full_name = f"{first_name} {last_name}".strip() or "Unknown"
+    public_id = profile_entity.get("publicIdentifier", "")
+    entity_urn = profile_entity.get("entityUrn", "")
+    if not entity_urn:
+        raise ValueError("Profile entity missing entityUrn")
+
+    geo_value = _resolve_star_field(profile_entity, urn_map, "*geo")
+    industry_value = _resolve_star_field(profile_entity, urn_map, "*industry")
+
+    profile_data: Dict[str, Any] = {
+        "urn": entity_urn,
+        "first_name": first_name or "Unknown",
+        "last_name": last_name or "Unknown",
+        "full_name": full_name,
         "headline": profile_entity.get("headline"),
         "summary": profile_entity.get("summary"),
-        "public_identifier": profile_entity.get("publicIdentifier"),
+        "public_identifier": public_id if public_id else None,
         "location_name": profile_entity.get("locationName"),
-        "geo": _resolve_star_field(profile_entity, urn_map, "*geo"),
-        "industry": _resolve_star_field(profile_entity, urn_map, "*industry"),
-        "url": f"https://www.linkedin.com/in/{profile_entity.get('publicIdentifier', '')}/",
+        "geo": geo_value if isinstance(geo_value, dict) else None,
+        "industry": industry_value if isinstance(industry_value, dict) else None,
+        "url": f"https://www.linkedin.com/in/{public_id}/" if public_id else "https://www.linkedin.com/in/unknown/",
         "positions": positions,
         "educations": educations,
         "connection_distance": connection_distance,

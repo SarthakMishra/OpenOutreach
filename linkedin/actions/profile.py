@@ -18,7 +18,7 @@ def scrape_profile(key: SessionKey, profile: dict):
     session = AccountSessionRegistry.get_or_create(
         handle=key.handle,
         campaign_name=key.campaign_name,
-        input_hash=key.input_hash,
+        run_id=key.run_id,
     )
 
     # ── Existing enrichment logic (100% unchanged) ──
@@ -28,18 +28,20 @@ def scrape_profile(key: SessionKey, profile: dict):
     api = PlaywrightLinkedinAPI(session=session)
 
     logger.info("Enriching profile → %s", url)
-    profile, data = api.get_profile(profile_url=url)
-
-    logger.info(
-        "Profile enriched – %s", profile.get("public_identifier")
-    ) if profile else None
+    result = api.get_profile(profile_url=url)
+    profile: dict | None = None
+    data: Any = None
+    if result[0] is not None:
+        profile, data = result
+        if profile:
+            logger.info("Profile enriched – %s", profile.get("public_identifier"))
+    else:
+        profile, data = result
 
     return profile, data
 
 
-def _save_profile_to_fixture(
-    enriched_profile: Dict[str, Any], path: str | Path
-) -> None:
+def _save_profile_to_fixture(enriched_profile: Dict[str, Any], path: str | Path) -> None:
     """Utility to save enriched profile as test fixture."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -64,13 +66,11 @@ if __name__ == "__main__":
         print("Usage: python -m linkedin.actions.profile <handle>")
         sys.exit(1)
 
-    handle = sys.argv[1]
+    import uuid
 
-    key = SessionKey.make(
-        handle=handle,
-        campaign_name="test_profile",
-        input_path=None,
-    )
+    handle = sys.argv[1]
+    run_id = str(uuid.uuid4())
+    key = SessionKey(handle=handle, campaign_name="test_profile", run_id=run_id)
 
     test_profile = {
         "url": "https://www.linkedin.com/in/lexfridman/",

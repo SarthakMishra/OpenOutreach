@@ -14,10 +14,13 @@ Primary goals:
 
 ## 0) Current `linkedin/` architecture (what exists today)
 
-### Orchestration
+**Note**: The campaign system will be removed in Phase 2. Current architecture includes legacy campaign code that will be deleted.
+
+### Legacy Orchestration (to be removed)
 - `linkedin/campaigns/connect_follow_up.py`
-  - A single campaign state machine: `DISCOVERED → ENRICHED → PENDING/CONNECTED → COMPLETED`
+  - Legacy campaign state machine: `DISCOVERED → ENRICHED → PENDING/CONNECTED → COMPLETED`
   - Uses actions: `profile.scrape_profile`, `connect.send_connection_request`, `message.send_follow_up_message`.
+  - **Will be deleted** - replaced with single-step touchpoints
 
 ### Browser + session
 - `linkedin/sessions/account.py`
@@ -25,7 +28,8 @@ Primary goals:
   - `ensure_browser()` bootstraps via `linkedin/navigation/login.py`.
   - `wait()` contains opportunistic scraping behavior (optional).
 - `linkedin/sessions/registry.py`
-  - In-process registry keyed by `(handle, campaign_name, input_hash)` to reuse `AccountSession`.
+  - In-process registry keyed by `(handle, campaign_name, run_id)` to reuse `AccountSession`.
+  - **Will be updated** to remove `campaign_name` (key by `handle, run_id` only)
 
 ### Accounts (current)
 - `assets/accounts.secrets.template.yaml` (file-based, manual editing)
@@ -82,27 +86,44 @@ Primary goals:
 
 ---
 
-## 2) Phase 2 — Define a clean “touchpoint” abstraction (so API can trigger anything)
+## 2) Phase 2 — Define a clean “touchpoint” abstraction (simple one-step automation primitives)
 
-Introduce a small internal contract:
+**Important**: Remove all campaign/workflow terminology from the repo. The API will only execute **single-step touchpoints** - no multi-step workflows or campaign orchestration.
 
-- **Touchpoint**: a unit of automation with validated input and deterministic outcomes.
+### 2.1 Remove Campaign System
+
+**Cleanup tasks:**
+- Delete `linkedin/campaigns/` directory entirely
+- Remove `campaign_name` from `SessionKey` (replace with optional `tags` or remove entirely)
+- Update `AccountSessionRegistry` to key by `(handle, run_id)` only
+- Remove all references to "campaign", "workflow", "orchestration" from code and docs
+- Update `AccountSession` to remove `campaign_name` attribute
+
+**Rationale**: Campaigns/workflows add unnecessary complexity. The API client can compose multiple touchpoint calls if needed. The server should only execute atomic, single-step operations.
+
+### 2.2 Define Touchpoint Abstraction
+
+Introduce a simple internal contract:
+
+- **Touchpoint**: a single atomic automation action with validated input and deterministic outcome.
+  - Each touchpoint executes **one** LinkedIn action (no chaining, no state machines)
   - Examples:
-    - `ProfileEnrich(public_identifier|url)`
-    - `ProfileVisit(url, duration_s, scroll_depth)`
-    - `Connect(url, note?)`
-    - `DirectMessage(url, message)`
-    - `PostReact(post_url, reaction_type)`
-    - `PostComment(post_url, comment_text)`
-    - `InMail(profile_url, subject?, body)`
+    - `ProfileEnrich(public_identifier|url)` - Fetch profile data
+    - `ProfileVisit(url, duration_s, scroll_depth)` - Visit a profile page
+    - `Connect(url, note?)` - Send connection request
+    - `DirectMessage(url, message)` - Send a message
+    - `PostReact(post_url, reaction_type)` - React to a post
+    - `PostComment(post_url, comment_text)` - Comment on a post
+    - `InMail(profile_url, subject?, body)` - Send InMail
 
-Implementation suggestion:
+**Implementation:**
 - Create `linkedin/touchpoints/`:
-  - `base.py` (protocol/abstract base)
+  - `base.py` (protocol/abstract base for all touchpoints)
   - `models.py` (Pydantic models for inputs/outputs)
   - `runner.py` (executes one touchpoint against an `AccountSession`)
+  - Individual touchpoint modules: `enrich.py`, `visit.py`, `connect.py`, `message.py`, etc.
 
-**Why**: campaigns become sequences of touchpoints; the API triggers touchpoints directly or via predefined workflows.
+**Key principle**: One touchpoint = one API call = one LinkedIn action. No workflows, no state machines, no orchestration.
 
 ---
 
@@ -120,11 +141,14 @@ Add a top-level package, e.g.:
 
 ### 3.2 API endpoints (minimum viable)
 - `GET /health`
-- `GET /accounts` (reads from `assets/accounts.secrets.yaml`)
-- `POST /runs` (submit a run)
-  - body: `{handle, touchpoints: [...], dry_run?, tags?}`
-- `GET /runs/{run_id}`
-- `POST /schedules` (create **cron** schedule for a run template)
+- `GET /accounts` (reads from accounts DB)
+- `POST /runs` (submit a single touchpoint execution)
+  - body: `{handle, touchpoint: {...}, dry_run?, tags?}`
+  - Returns: `{run_id, status, ...}`
+- `GET /runs/{run_id}` (get execution status and results)
+- `GET /runs` (list runs with filtering: `?handle=...&status=...&limit=...`)
+- `POST /schedules` (create **cron** schedule for recurring touchpoint execution)
+  - body: `{handle, touchpoint: {...}, cron: "...", tags?}`
 - `GET /schedules`
 - `DELETE /schedules/{schedule_id}`
 
@@ -137,8 +161,49 @@ Add a simple API key to start:
 - **Implemented now (DB layer):** `accounts` table and CRUD helpers in `linkedin/db/accounts.py`; `linkedin/conf.py` now reads accounts from the DB (no YAML ingestion; no backward compatibility).
 - **To do later (when FastAPI is added):** expose `/accounts` CRUD endpoints that wrap these DB helpers.
 - Touchpoint execution:
-  - Every `run` or `touchpoint` payload must include `handle` (or account ID) to select credentials/cookies.
+  - Every `run` payload must include `handle` to select credentials/cookies.
   - Locking remains per-account to avoid concurrent sessions.
+
+### 3.5 Run tracking and logging (critical for diagnostics)
+
+**Database schema for run tracking:**
+
+Add `runs` table to server DB (separate from per-account profile DBs):
+
+```python
+class Run(Base):
+    __tablename__ = "runs"
+    
+    run_id = Column(String, primary_key=True)  # UUID
+    handle = Column(String, nullable=False, index=True)
+    touchpoint_type = Column(String, nullable=False)  # "enrich", "connect", "message", etc.
+    touchpoint_input = Column(JSON, nullable=False)  # Full touchpoint payload
+    status = Column(String, nullable=False)  # "pending", "running", "completed", "failed"
+    result = Column(JSON, nullable=True)  # Touchpoint output/result
+    error = Column(Text, nullable=True)  # Error message if failed
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    duration_ms = Column(Integer, nullable=True)
+    tags = Column(JSON, nullable=True)  # Optional tags for filtering
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+```
+
+**Implementation:**
+- Create `openoutreach_server/db/models.py` with `Run` model
+- Log every touchpoint execution:
+  - Create `Run` record when `POST /runs` is called (status="pending")
+  - Update to "running" when execution starts
+  - Update to "completed"/"failed" with result/error when done
+  - Store full touchpoint input/output for debugging
+- Add indexes on `handle`, `status`, `created_at` for efficient querying
+- Use `run_id` from database (UUID) for all `SessionKey` creation
+
+**Benefits:**
+- Full audit trail of all automation executions
+- Easy debugging: see exactly what was executed and what failed
+- Performance monitoring: track duration, success rates
+- Filtering: find all runs for an account, by status, by touchpoint type
+- Correlation: link runs to profiles, errors, etc.
 
 ---
 
@@ -154,22 +219,36 @@ LinkedIn automation must be conservative:
 ### 4.2 Background execution
 Start simple:
 - Use FastAPI lifespan + a background task runner thread/process that:
-  - pulls queued jobs from `server.db`
+  - pulls queued runs from `server.db` (status="pending")
   - acquires account lock
-  - creates/reuses `AccountSession`
-  - executes touchpoints sequentially
-  - records results
+  - creates/reuses `AccountSession` (using `run_id` from DB)
+  - executes **single touchpoint** atomically
+  - updates `Run` record with result/error
+  - releases account lock
 
 ### 4.3 Scheduling
-Cron-only scheduling options:
-1. **APScheduler** with a SQLAlchemy job store (persisted schedules) using cron triggers only.
-2. **Own schedule table** (cron string + next_run_at) and poll.
-
-Pick (2) first for transparency and control (easier debugging), move to APScheduler later if desired.
+Cron-only scheduling for recurring touchpoint execution:
+- **Schedule table** in server DB:
+  ```python
+  class Schedule(Base):
+      schedule_id = Column(String, primary_key=True)  # UUID
+      handle = Column(String, nullable=False)
+      touchpoint = Column(JSON, nullable=False)  # Touchpoint definition
+      cron = Column(String, nullable=False)  # Cron expression
+      next_run_at = Column(DateTime, nullable=True)
+      active = Column(Boolean, default=True)
+      tags = Column(JSON, nullable=True)
+      created_at = Column(DateTime, server_default=func.now())
+  ```
+- Background scheduler thread:
+  - Polls `Schedule` table for `next_run_at <= now()` and `active=True`
+  - Creates a new `Run` record (status="pending") for each scheduled execution
+  - Updates `next_run_at` based on cron expression
+- Keep it simple: own schedule table + polling (easier debugging than APScheduler)
 
 ---
 
-## 5) Phase 5 — Extend touchpoints
+## 5) Phase 5 — Extend touchpoints (one-step actions only)
 
 ### 5.1 Explicit profile visits
 Add `linkedin/actions/visit.py`:
@@ -214,16 +293,22 @@ Implementation approach:
 
 ## 7) Phase 7 — Observability + safety controls
 
+**Note**: Run tracking is already implemented in Phase 3.5 (database logging). This phase adds additional observability.
+
 Add operational basics:
-- Structured logging per `run_id` and `account`
-- Persistent run history table:
-  - start/end timestamps
-  - per-touchpoint result
-  - last error + screenshot path (optional)
-- Hard quotas:
-  - max connects/day, max messages/day, max posts/day
-- Backoff:
-  - if UI selectors fail repeatedly, pause that account and require manual intervention
+- Structured logging per `run_id` and `handle` (correlate with `Run` records)
+- Enhanced run tracking:
+  - Screenshot capture on failure (store path in `Run.error_screenshot`)
+  - Request/response logging for API touchpoints
+  - Browser console logs capture
+- Hard quotas (enforce at account level):
+  - max connects/day, max messages/day, max posts/day per `handle`
+  - Store in `Account` model or separate `account_quotas` table
+  - Check before executing touchpoint, reject if quota exceeded
+- Backoff and circuit breakers:
+  - Track consecutive failures per account
+  - If UI selectors fail repeatedly, mark account as "paused" and require manual intervention
+  - Store pause state in `Account` model or `account_status` table
 
 ---
 
@@ -260,17 +345,18 @@ Default behavior:
 - E2E tests require explicit opt-in, e.g.:
   - `pytest -m e2e`
 
-### What E2E tests should validate (job runner aligned)
+### What E2E tests should validate (touchpoint execution aligned)
 
 Each E2E test should exercise the system through the **API**, not by calling action functions directly:
-1. `POST /runs` with `handle` + `touchpoints`
+1. `POST /runs` with `handle` + single `touchpoint` (not multiple touchpoints)
 2. poll `GET /runs/{run_id}` until terminal state
 3. assert:
-   - run state transitions
-   - touchpoint results recorded (success/failure + reason)
+   - run status transitions: "pending" → "running" → "completed"/"failed"
+   - touchpoint result recorded correctly
+   - `Run` record in database matches API response
    - optional artifacts exist (screenshot/HTML dump) on failure
 
-This keeps the E2E suite compatible with the future architecture (server is the product surface).
+This keeps the E2E suite compatible with the architecture (server executes single touchpoints, no workflows).
 
 ---
 

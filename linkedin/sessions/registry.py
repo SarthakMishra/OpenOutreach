@@ -1,9 +1,7 @@
 # linkedin/sessions/registry.py
 from __future__ import annotations
 
-import hashlib
 import logging
-from pathlib import Path
 from typing import NamedTuple, Optional
 
 from linkedin.sessions.account import AccountSession
@@ -19,11 +17,11 @@ class AccountSessionRegistry:
         cls,
         handle: str,
         campaign_name: str,
-        input_hash: str,
+        run_id: str,
     ) -> "AccountSession":
         from .account import AccountSession
 
-        key = SessionKey(handle, campaign_name, input_hash)
+        key = SessionKey(handle, campaign_name, run_id)
 
         if key not in cls._instances:
             cls._instances[key] = AccountSession(key)
@@ -34,15 +32,16 @@ class AccountSessionRegistry:
         return cls._instances[key]
 
     @classmethod
-    def get_or_create_from_path(
+    def get_or_create_for_run(
         cls,
         handle: str,
         campaign_name: str,
-        input_path: Path | str,
-    ) -> "AccountSession":
-        input_path = Path(input_path)
-        key = SessionKey.make(handle, campaign_name, input_path)
-        return cls.get_or_create(key.handle, key.campaign_name, key.input_hash), key
+        run_id: str,
+    ) -> tuple["AccountSession", "SessionKey"]:
+        """Convenience method that returns both session and key."""
+        session = cls.get_or_create(handle, campaign_name, run_id)
+        key = SessionKey(handle=handle, campaign_name=campaign_name, run_id=run_id)
+        return session, key
 
     @classmethod
     def get_existing(cls, key: SessionKey) -> Optional["AccountSession"]:
@@ -58,61 +57,18 @@ class AccountSessionRegistry:
 class SessionKey(NamedTuple):
     handle: str
     campaign_name: str
-    input_hash: str
+    run_id: str
 
     def __str__(self) -> str:
-        return f"{self.handle}::{self.campaign_name}::{self.input_hash}"
-
-    @classmethod
-    def make(
-        cls, handle: str, campaign_name: str, input_path: Path | str | None = None
-    ) -> "SessionKey":
-        """
-        Build a SessionKey. If input_path is missing or unreadable, fall back to a stable
-        placeholder hash for API-driven runs (no file input).
-        """
-        if input_path is None:
-            input_hash = "api-input"
-        else:
-            try:
-                input_hash = hash_file(input_path)
-            except FileNotFoundError:
-                input_hash = "api-input"
-        return cls(handle=handle, campaign_name=campaign_name, input_hash=input_hash)
+        return f"{self.handle}::{self.campaign_name}::{self.run_id}"
 
     def as_filename_safe(self) -> str:
-        return f"{self.handle}--{self.campaign_name}--{self.input_hash}"
-
-
-def hash_file(
-    path: Path | str, chunk_size: int = 8192, algorithm: str = "sha256"
-) -> str:
-    """
-    Compute a stable cryptographic hash of a file's contents.
-    Used to detect if the input file has changed → new campaign run.
-    """
-    path = Path(path)
-    if not path.is_file():
-        raise FileNotFoundError(
-            f"Cannot hash file: {path} does not exist or is not a file"
-        )
-
-    hasher = hashlib.new(algorithm)
-
-    with path.open("rb") as f:
-        while chunk := f.read(chunk_size):
-            hasher.update(chunk)
-
-    full_hex = hasher.hexdigest()
-    short_hex = full_hex[:16]
-    logger.debug(f"Hashed file {path.name} → {short_hex} (full: {full_hex})")
-    return short_hex
+        return f"{self.handle}--{self.campaign_name}--{self.run_id}"
 
 
 # ——————————————————————————————————————————————————————————————
 if __name__ == "__main__":
     import logging
-    from pathlib import Path
 
     logging.getLogger().handlers.clear()
     logging.basicConfig(
@@ -127,13 +83,16 @@ if __name__ == "__main__":
         print("Usage: python -m linkedin.sessions.registry <handle>")
         sys.exit(1)
 
+    import uuid
+
     handle = sys.argv[1]
 
     CAMPAIGN_NAME = "connect_follow_up"
-    session, _ = AccountSessionRegistry.get_or_create_from_path(
+    run_id = str(uuid.uuid4())
+    session, _ = AccountSessionRegistry.get_or_create_for_run(
         handle=handle,
         campaign_name=CAMPAIGN_NAME,
-        input_path=None,
+        run_id=run_id,
     )
 
     session.ensure_browser()  # ← this does everything
@@ -141,8 +100,9 @@ if __name__ == "__main__":
     print("\nSession ready! Use session.page, session.context, etc.")
     print(f"   Handle   : {session.handle}")
     print(f"   Campaign : {session.campaign_name}")
-    print(f"   Input hash : {session.key.input_hash}")
+    print(f"   Run ID   : {session.run_id}")
     print(f"   Key      : {session.key}")
     print("   Browser survives crash/reboot/Ctrl+C\n")
 
+    assert session.page is not None, "page must be initialized via ensure_browser()"
     session.page.pause()  # keeps browser open for manual testing

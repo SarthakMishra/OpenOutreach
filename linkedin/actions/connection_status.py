@@ -57,9 +57,7 @@ def get_connection_status(
         return ProfileState.CONNECTED
 
     # 3a. Connect button visible?
-    invite_btn = top_card.locator(
-        'button[aria-label*="Invite"][aria-label*="to connect"]:visible'
-    )
+    invite_btn = top_card.locator('button[aria-label*="Invite"][aria-label*="to connect"]:visible')
     if invite_btn.count() > 0:
         logger.debug("Found 'Connect' button → NOT_CONNECTED")
         return ProfileState.ENRICHED
@@ -94,12 +92,11 @@ if __name__ == "__main__":
         print("Usage: python -m linkedin.actions.connections <handle>")
         sys.exit(1)
 
+    import uuid
+
     handle = sys.argv[1]
-    key = SessionKey.make(
-        handle=handle,
-        campaign_name="test_status",
-        input_path=None,
-    )
+    run_id = str(uuid.uuid4())
+    key = SessionKey(handle=handle, campaign_name="test_status", run_id=run_id)
 
     public_identifier = "benjames01"
     test_profile = {
@@ -112,10 +109,10 @@ if __name__ == "__main__":
     print(f"Session key: {key}")
 
     # Get session and navigate
-    session, _ = AccountSessionRegistry.get_or_create_from_path(
+    session, _ = AccountSessionRegistry.get_or_create_for_run(
         handle=key.handle,
         campaign_name=key.campaign_name,
-        input_path=None,
+        run_id=run_id,
     )
 
     # Check status

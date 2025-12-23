@@ -12,12 +12,14 @@ logger = logging.getLogger(__name__)
 
 
 def _go_to_profile(session: "AccountSession", url: str, public_identifier: str):
-    if f"/in/{public_identifier}" in session.page.url:
+    assert session.page is not None, "page must be initialized via ensure_browser()"
+    page = session.page
+    if f"/in/{public_identifier}" in page.url:
         return
     logger.info("Direct navigation → %s", public_identifier)
     goto_page(
         session,
-        action=lambda: session.page.goto(url),
+        action=lambda: page.goto(url),
         expected_url_pattern=f"/in/{public_identifier}",
         error_message="Failed to navigate to the target profile",
     )
@@ -28,6 +30,7 @@ def search_profile(session: "AccountSession", profile: Dict[str, Any]):
 
     # Ensure browser is alive before doing anything
     session.ensure_browser()
+    assert session.page is not None, "page must be initialized via ensure_browser()"
 
     if f"/in/{public_identifier}" in session.page.url:
         return
@@ -35,19 +38,19 @@ def search_profile(session: "AccountSession", profile: Dict[str, Any]):
     _simulate_human_search(session, profile)
 
     url = profile.get("url")
-    _go_to_profile(session, url, public_identifier)
+    if url and public_identifier:
+        _go_to_profile(session, url, public_identifier)
 
 
 def _initiate_search(session: "AccountSession", full_name: str):
     """Go to feed and start typing the name in the global search bar."""
+    assert session.page is not None, "page must be initialized via ensure_browser()"
     page = session.page
 
     if "feed/" not in page.url:
         goto_page(
             session,
-            action=lambda: page.goto(
-                "https://www.linkedin.com/feed/?doFeedRefresh=true&nis=true"
-            ),
+            action=lambda: page.goto("https://www.linkedin.com/feed/?doFeedRefresh=true&nis=true"),
             expected_url_pattern="feed/",
             error_message="Failed to reach LinkedIn feed",
         )
@@ -67,9 +70,7 @@ def _initiate_search(session: "AccountSession", full_name: str):
     new_path = "/search/results/people/" if "/all/" in current.path else current.path
     params = parse_qs(current.query)
     params["page"] = ["1"]
-    new_url = current._replace(
-        path=new_path, query=urlencode(params, doseq=True)
-    ).geturl()
+    new_url = current._replace(path=new_path, query=urlencode(params, doseq=True)).geturl()
 
     goto_page(
         session,
@@ -80,6 +81,7 @@ def _initiate_search(session: "AccountSession", full_name: str):
 
 
 def _paginate_to_next_page(session: "AccountSession", page_num: int):
+    assert session.page is not None, "page must be initialized via ensure_browser()"
     page = session.page
     current = urlparse(page.url)
     params = parse_qs(current.query)
@@ -96,6 +98,7 @@ def _paginate_to_next_page(session: "AccountSession", page_num: int):
 
 
 def _simulate_human_search(session: "AccountSession", profile: Dict[str, Any]) -> bool:
+    assert session.page is not None, "page must be initialized via ensure_browser()"
     full_name = profile.get("full_name", None)
     public_identifier = profile.get("public_identifier")
 
@@ -164,12 +167,15 @@ if __name__ == "__main__":
         print("Usage: python -m linkedin.actions.search <handle>")
         sys.exit(1)
 
-    handle = sys.argv[1]
+    import uuid
 
-    session, _ = AccountSessionRegistry.get_or_create_from_path(
+    handle = sys.argv[1]
+    run_id = str(uuid.uuid4())
+
+    session, _ = AccountSessionRegistry.get_or_create_for_run(
         handle=handle,
         campaign_name="test_search",
-        input_path=None,
+        run_id=run_id,
     )
 
     # Make sure browser is up
@@ -182,6 +188,7 @@ if __name__ == "__main__":
 
     search_profile(session, test_profile)
 
+    assert session.page is not None, "page must be initialized via ensure_browser()"
     logger.info("Search complete! Final URL → %s", session.page.url)
     input("Press Enter to close browser...")
     session.close()

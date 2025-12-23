@@ -17,6 +17,8 @@ class PlaywrightLinkedinAPI:
         session: "AccountSession",
     ):
         self.session = session
+        assert session.page is not None, "page must be initialized via ensure_browser()"
+        assert session.context is not None, "context must be initialized via ensure_browser()"
         self.page = session.page
         self.context = session.context
 

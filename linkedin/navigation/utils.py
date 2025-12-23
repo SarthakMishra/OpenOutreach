@@ -21,15 +21,12 @@ def goto_page(
 ):
     from linkedin.db.profiles import add_profile_urls
 
+    assert session.page is not None, "page must be initialized via ensure_browser()"
     page = session.page
     action()
-    if not page:
-        return
 
     try:
-        page.wait_for_url(
-            lambda url: expected_url_pattern in unquote(url), timeout=timeout
-        )
+        page.wait_for_url(lambda url: expected_url_pattern in unquote(url), timeout=timeout)
     except PlaywrightTimeoutError:
         pass  # we still continue and check URL below
 
@@ -37,9 +34,7 @@ def goto_page(
 
     current = unquote(page.url)
     if expected_url_pattern not in current:
-        raise RuntimeError(
-            f"{error_message} → expected '{expected_url_pattern}' | got '{current}'"
-        )
+        raise RuntimeError(f"{error_message} → expected '{expected_url_pattern}' | got '{current}'")
 
     logger.debug("Navigated to %s", page.url)
     if OPPORTUNISTIC_SCRAPING:
@@ -77,9 +72,7 @@ def get_top_card(session):
         top_card = session.page.locator("section.artdeco-card:has(> div.pv-top-card)")
 
     if top_card.count() == 0:
-        top_card = session.page.locator(
-            "section[data-member-id] >> div.pv-top-card"
-        ).locator("..")
+        top_card = session.page.locator("section[data-member-id] >> div.pv-top-card").locator("..")
 
     if top_card.count() == 0:
         top_card = session.page.locator('section:has(> div[class*="pv-top-card"])')
@@ -92,6 +85,7 @@ def get_top_card(session):
 
 
 def save_page(session: "AccountSession", profile: dict):
+    assert session.page is not None, "page must be initialized via ensure_browser()"
     filepath = FIXTURE_PAGES_DIR / f"{profile.get('public_identifier')}.html"
     html_content = session.page.content()
     with open(filepath, "w", encoding="utf-8") as f:

@@ -24,7 +24,7 @@ def send_connection_request(
     session = AccountSessionRegistry.get_or_create(
         handle=key.handle,
         campaign_name=key.campaign_name,
-        input_hash=key.input_hash,
+        run_id=key.run_id,
     )
 
     public_identifier = profile.get("public_identifier")
@@ -39,9 +39,7 @@ def send_connection_request(
     }
 
     if connection_status in skip_reasons:
-        logger.info(
-            "Skipping %s – %s", public_identifier, skip_reasons[connection_status]
-        )
+        logger.info("Skipping %s – %s", public_identifier, skip_reasons[connection_status])
         return connection_status
 
     # If a note is provided, use the full "Add a note" flow.
@@ -63,9 +61,7 @@ def send_connection_request(
 
 
 def _check_weekly_invitation_limit(session):
-    weekly_invitation_limit = session.page.locator(
-        'div[class*="ip-fuse-limit-alert__warning"]'
-    )
+    weekly_invitation_limit = session.page.locator('div[class*="ip-fuse-limit-alert__warning"]')
     if weekly_invitation_limit.count() != 0:
         raise ReachedConnectionLimit("Weekly connection limit pop up appeared")
 
@@ -75,9 +71,7 @@ def _check_weekly_invitation_limit(session):
 def _connect_direct(session):
     session.wait()
     top_card = get_top_card(session)
-    direct = top_card.locator(
-        'button[aria-label*="Invite"][aria-label*="to connect"]:visible'
-    )
+    direct = top_card.locator('button[aria-label*="Invite"][aria-label*="to connect"]:visible')
     if direct.count() == 0:
         return False
 
@@ -96,18 +90,14 @@ def _connect_via_more(session):
     top_card = get_top_card(session)
 
     # Fallback: More → Connect
-    more = top_card.locator(
-        'button[id*="overflow"]:visible, button[aria-label*="More actions"]:visible'
-    )
+    more = top_card.locator('button[id*="overflow"]:visible, button[aria-label*="More actions"]:visible')
     if more.count() == 0:
         return False
     more.first.click()
 
     session.wait()
 
-    connect_option = top_card.locator(
-        'div[role="button"][aria-label^="Invite"][aria-label*=" to connect"]'
-    )
+    connect_option = top_card.locator('div[role="button"][aria-label^="Invite"][aria-label*=" to connect"]')
     if connect_option.count() == 0:
         return False
     connect_option.first.click()
@@ -141,20 +131,14 @@ def _perform_send_invitation_with_note(session, message: str):
     session.wait()
     top_card = get_top_card(session)
 
-    direct = top_card.locator(
-        'button[aria-label*="Invite"][aria-label*="to connect"]:visible'
-    )
+    direct = top_card.locator('button[aria-label*="Invite"][aria-label*="to connect"]:visible')
     if direct.count() > 0:
         direct.first.click()
     else:
-        more = top_card.locator(
-            'button[id*="overflow"], button[aria-label*="More actions"]'
-        ).first
+        more = top_card.locator('button[id*="overflow"], button[aria-label*="More actions"]').first
         more.click()
         session.wait()
-        session.page.locator(
-            'div[role="button"][aria-label^="Invite"][aria-label*=" to connect"]'
-        ).first.click()
+        session.page.locator('div[role="button"][aria-label^="Invite"][aria-label*=" to connect"]').first.click()
 
     session.wait()
     session.page.locator('button:has-text("Add a note")').first.click()
@@ -165,9 +149,7 @@ def _perform_send_invitation_with_note(session, message: str):
     session.wait()
     logger.debug("Filled note (%d chars)", len(message))
 
-    session.page.locator(
-        'button:has-text("Send"), button[aria-label*="Send invitation"]'
-    ).first.click(force=True)
+    session.page.locator('button:has-text("Send"), button[aria-label*="Send invitation"]').first.click(force=True)
     session.wait()
     logger.debug("Connection request with note sent")
 
@@ -187,8 +169,11 @@ if __name__ == "__main__":
         print("Usage: python -m linkedin.actions.connect <handle>")
         sys.exit(1)
 
+    import uuid
+
     handle = sys.argv[1]
-    key = SessionKey.make(handle, "test_connect", csv_path=None)
+    run_id = str(uuid.uuid4())
+    key = SessionKey(handle=handle, campaign_name="test_connect", run_id=run_id)
 
     logging.basicConfig(
         level=logging.DEBUG,
