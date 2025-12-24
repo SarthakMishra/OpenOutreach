@@ -53,6 +53,26 @@ def playwright_login(session: "AccountSession"):
     )
 
 
+def _cleanup_chrome_locks(user_data_dir: Path) -> None:
+    """
+    Remove Chrome profile lock files from a previous crashed session.
+
+    Chrome uses SingletonLock, SingletonSocket, and SingletonCookie files
+    to prevent multiple instances from using the same profile. If a previous
+    session crashed without proper cleanup, these files remain and block
+    future sessions.
+    """
+    lock_files = ["SingletonLock", "SingletonSocket", "SingletonCookie"]
+    for lock_file in lock_files:
+        lock_path = user_data_dir / lock_file
+        if lock_path.exists():
+            try:
+                lock_path.unlink()
+                logger.debug("Removed stale Chrome lock: %s", lock_path)
+            except OSError as e:
+                logger.warning("Failed to remove Chrome lock %s: %s", lock_path, e)
+
+
 def build_playwright(user_data_dir=None):
     """
     Build Playwright session using Chrome with persistent context.
@@ -67,6 +87,12 @@ def build_playwright(user_data_dir=None):
         user_data_dir: Directory for persistent browser data
     """
     logger.debug("Launching Patchright with Chrome (undetected)")
+
+    # Clean up any stale lock files from crashed sessions
+    if user_data_dir:
+        user_data_path = Path(user_data_dir) if not isinstance(user_data_dir, Path) else user_data_dir
+        if user_data_path.exists():
+            _cleanup_chrome_locks(user_data_path)
 
     playwright = sync_playwright().start()
 

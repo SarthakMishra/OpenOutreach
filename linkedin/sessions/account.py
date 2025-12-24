@@ -96,13 +96,20 @@ class AccountSession:
             try:
                 # Close context first (this closes the persistent context)
                 self.context.close()
+
                 # Wait for Chrome to fully release the profile
-                time.sleep(1.0)
+                # Persistent contexts need more time to fully terminate
+                time.sleep(2.0)
+
+                # Stop playwright to ensure all connections are closed
+                if self.playwright:
+                    self.playwright.stop()
+                    # Additional wait after stopping playwright
+                    time.sleep(1.0)
 
                 if self.browser:
                     self.browser.close()
-                if self.playwright:
-                    self.playwright.stop()
+
                 logger.info("Browser closed gracefully (%s)", self.handle)
             except Exception as e:
                 logger.debug("Error closing browser: %s", e)
