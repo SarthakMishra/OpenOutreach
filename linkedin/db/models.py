@@ -47,6 +47,7 @@ class Account(Base):
     connections_today = Column(Integer, default=0, server_default="0", nullable=False)
     messages_today = Column(Integer, default=0, server_default="0", nullable=False)
     posts_today = Column(Integer, default=0, server_default="0", nullable=False)
-    quota_reset_at = Column(DateTime, nullable=True)  # When to reset daily quotas
+    # Always store timezone-aware UTC datetimes for quota resets
+    quota_reset_at = Column(DateTime(timezone=True), nullable=True)  # When to reset daily quotas
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)

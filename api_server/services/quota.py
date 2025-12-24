@@ -134,6 +134,11 @@ def _reset_daily_quotas_if_needed(account: Account) -> None:
     now = datetime.now(timezone.utc)
     reset_at = cast(datetime | None, account.quota_reset_at)
 
+    # Normalize legacy naive timestamps to UTC and persist the fix once.
+    if reset_at is not None and reset_at.tzinfo is None:
+        reset_at = reset_at.replace(tzinfo=timezone.utc)
+        account.quota_reset_at = reset_at
+
     # If no reset time set, or reset time has passed, reset quotas
     if reset_at is None or reset_at <= now:
         # Reset to tomorrow at midnight UTC
