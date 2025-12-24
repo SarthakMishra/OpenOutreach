@@ -62,8 +62,12 @@ def build_playwright(user_data_dir=None):
     - Use launch_persistent_context for better stealth
     - no_viewport=True to avoid fingerprint injection
     - No custom headers/user_agent (let Chrome handle it naturally)
+
+    Args:
+        user_data_dir: Directory for persistent browser data
     """
     logger.debug("Launching Patchright with Chrome (undetected)")
+
     playwright = sync_playwright().start()
 
     # Use persistent context with Chrome (Patchright best practice)
@@ -119,12 +123,35 @@ def init_playwright_session(session: "AccountSession", handle: str):
             error_message="Checking existing session",
             to_scrape=False,
         )
+        # Verify we're actually on /feed and not redirected to login page
+        current_url = page.url
+        if "/uas/login" in current_url or "/login" in current_url:
+            raise RuntimeError(f"Redirected to login page: {current_url}")
         logger.info("\033[92mUsing existing session from persistent context\033[0m")
     except RuntimeError:
         # Not logged in, perform login
         logger.info("No existing session found, performing login...")
-        playwright_login(session)
-        logger.info("\033[92mLogin successful – session saved in persistent context → %s\033[0m", user_data_dir)
+        try:
+            playwright_login(session)
+            # Verify login was successful - check we're on /feed and not still on login page
+            session.page.wait_for_load_state("load")
+            current_url = session.page.url
+            if "/uas/login" in current_url or "/login" in current_url:
+                raise RuntimeError(
+                    f"Login failed – still on login page: {current_url}. Actions will not work without authentication."
+                )
+            if "/feed" not in current_url:
+                raise RuntimeError(
+                    f"Login failed – expected /feed but got: {current_url}. "
+                    "Actions will not work without authentication."
+                )
+            logger.info("\033[92mLogin successful – session saved in persistent context → %s\033[0m", user_data_dir)
+        except Exception as e:
+            # If login fails, raise an error - actions won't work without authentication
+            logger.error("\033[91mLogin failed: %s\033[0m", e)
+            raise RuntimeError(
+                f"Authentication failed for @{handle}. Actions will not work without authentication. Error: {e}"
+            ) from e
 
     session.page.wait_for_load_state("load")
     logger.info("\033[1;32mBrowser awake and fully authenticated!\033[0m")
