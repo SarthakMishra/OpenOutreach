@@ -202,6 +202,14 @@ def execute_run(run_id: str) -> None:
                             db_session.commit()
                     finally:
                         db_session.close()
+                finally:
+                    # Always close browser session to prevent resource leaks
+                    if account_session:
+                        try:
+                            account_session.close()
+                            run_logger.debug("Browser session closed for run %s", run_id)
+                        except Exception as e:
+                            run_logger.warning("Error closing browser session: %s", e)
 
         # Execute in background thread
         thread = threading.Thread(target=_execute, daemon=True)

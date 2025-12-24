@@ -23,7 +23,7 @@ def _run_to_response(run: Run) -> RunResponse:
         result=cast(dict[str, Any] | None, run.result),
         error=cast(str | None, run.error),
         error_screenshot=cast(str | None, run.error_screenshot),
-        console_logs=cast(list[dict[str, Any]] | None, run.console_logs),
+        console_logs=cast(list[dict[str, Any]] | None, getattr(run, "console_logs", None)),
         started_at=cast(datetime | None, run.started_at),
         completed_at=cast(datetime | None, run.completed_at),
         duration_ms=cast(int | None, run.duration_ms),
@@ -35,33 +35,44 @@ def _run_to_response(run: Run) -> RunResponse:
 @router.post("/runs", response_model=RunResponse, status_code=status.HTTP_201_CREATED)
 def create_run_endpoint(request: RunCreateRequest, api_key: str = Depends(verify_api_key)):
     """Create a new run."""
-    # Add run_id to touchpoint input
+    import logging
     import uuid
 
-    run_id = str(uuid.uuid4())
-    touchpoint_input = request.touchpoint.copy()
-    touchpoint_input["handle"] = request.handle
-    touchpoint_input["run_id"] = run_id
+    logger = logging.getLogger(__name__)
 
-    # Create run record
-    run_id_db = create_run(
-        handle=request.handle,
-        touchpoint_input=touchpoint_input,
-        tags=request.tags,
-    )
+    try:
+        # Add run_id to touchpoint input
+        run_id = str(uuid.uuid4())
+        touchpoint_input = request.touchpoint.copy()
+        touchpoint_input["handle"] = request.handle
+        touchpoint_input["run_id"] = run_id
 
-    # Execute if not dry run (background worker will pick it up)
-    if not request.dry_run:
-        # Don't execute immediately - let background worker handle it
-        # This ensures proper queuing and account locking
-        pass
+        # Create run record
+        run_id_db = create_run(
+            handle=request.handle,
+            touchpoint_input=touchpoint_input,
+            tags=request.tags,
+        )
 
-    # Return run
-    run = get_run(run_id_db)
-    if not run:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create run")
+        # Execute if not dry run (background worker will pick it up)
+        if not request.dry_run:
+            # Don't execute immediately - let background worker handle it
+            # This ensures proper queuing and account locking
+            pass
 
-    return _run_to_response(run)
+        # Return run
+        run = get_run(run_id_db)
+        if not run:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create run")
+
+        return _run_to_response(run)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error creating run: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal server error: {str(e)}"
+        )
 
 
 @router.get("/runs/{run_id}", response_model=RunResponse)
