@@ -1,5 +1,6 @@
 # linkedin/actions/connect.py
 import logging
+import time
 from typing import Any, Dict
 
 from linkedin.navigation.enums import ProfileState
@@ -127,28 +128,48 @@ def _perform_send_invitation_with_note(session, message: str):
     session.wait()
     top_card = get_top_card(session)
 
+    # Try direct Connect button first
     direct = top_card.locator('button[aria-label*="Invite"][aria-label*="to connect"]:visible')
     if direct.count() > 0:
         direct.first.click()
+        logger.debug("Clicked direct 'Connect' button")
     else:
-        more = top_card.locator('button[id*="overflow"], button[aria-label*="More actions"]').first
+        # Fallback: More → Connect
+        more = top_card.locator('button[id*="overflow"]:visible, button[aria-label*="More actions"]:visible').first
         more.click()
         session.wait()
-        session.page.locator('div[role="button"][aria-label^="Invite"][aria-label*=" to connect"]').first.click()
 
-    session.wait()
-    session.page.locator('button:has-text("Add a note")').first.click()
-    session.wait()
+        # Wait for dropdown to be visible, then click the Connect option
+        connect_option = top_card.locator('div[role="button"][aria-label^="Invite"][aria-label*=" to connect"]:visible')
+        connect_option.first.wait_for(state="visible", timeout=5000)
+        connect_option.first.click()
+        logger.debug("Used 'More → Connect' flow")
 
-    textarea = session.page.locator('textarea#custom-message, textarea[name="message"]')
+    # Wait for modal to appear, then click "Add a note"
+    session.wait()
+    add_note_btn = session.page.locator('button:has-text("Add a note"):visible')
+    add_note_btn.first.wait_for(state="visible", timeout=10000)
+    add_note_btn.first.click()
+    logger.debug("Clicked 'Add a note' button")
+
+    # Wait for modal to fully render (textarea appears)
+    time.sleep(2)  # Give modal time to render
+
+    # Fill the note textarea - wait for it to be visible and enabled
+    textarea = session.page.locator('textarea[name="message"], textarea#custom-message')
+    textarea.first.wait_for(state="visible", timeout=10000)
     textarea.first.fill(message)
     session.wait()
     logger.debug("Filled note (%d chars)", len(message))
 
-    session.page.locator('button:has-text("Send"), button[aria-label*="Send invitation"]').first.click(force=True)
+    # Click the Send button - wait for it to be visible
+    send_btn = session.page.locator('button[aria-label="Send invitation"]:visible, button:has-text("Send"):visible')
+    send_btn.first.wait_for(state="visible", timeout=10000)
+    send_btn.first.click()
     session.wait()
     logger.debug("Connection request with note sent")
 
+    # Check for errors
     error = session.page.locator('div[data-test-artdeco-toast-item-type="error"]')
     if error.count() != 0:
         raise SkipProfile(f"{error.inner_text().strip()}")
