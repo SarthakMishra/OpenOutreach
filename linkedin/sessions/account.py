@@ -94,7 +94,11 @@ class AccountSession:
     def close(self):
         if self.context:
             try:
+                # Close context first (this closes the persistent context)
                 self.context.close()
+                # Wait for Chrome to fully release the profile
+                time.sleep(1.0)
+
                 if self.browser:
                     self.browser.close()
                 if self.playwright:
