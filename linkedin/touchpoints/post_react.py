@@ -38,6 +38,9 @@ class PostReactTouchpoint(Touchpoint):
             - error: str or None
         """
         try:
+            # Ensure browser is initialized
+            session.ensure_browser()
+
             # Execute action
             success = react_to_post(
                 session=session,

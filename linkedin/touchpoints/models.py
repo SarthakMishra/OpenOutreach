@@ -65,8 +65,22 @@ class ConnectInput(TouchpointInput):
 
     type: Literal[TouchpointType.CONNECT] = TouchpointType.CONNECT
     url: str = Field(..., description="LinkedIn profile URL")
-    public_identifier: Optional[str] = Field(None, description="LinkedIn public identifier")
+    public_identifier: Optional[str] = Field(
+        None, description="LinkedIn public identifier (auto-extracted from URL if not provided)"
+    )
     note: Optional[str] = Field(None, description="Optional connection note")
+
+    def model_post_init(self, __context: Any) -> None:
+        """Extract public_identifier from URL if not provided."""
+        if not self.public_identifier and self.url:
+            from linkedin.db.profiles import url_to_public_id
+
+            try:
+                self.public_identifier = url_to_public_id(self.url)
+            except ValueError:
+                # If URL parsing fails, public_identifier remains None
+                # The action layer can handle this gracefully
+                pass
 
 
 class DirectMessageInput(TouchpointInput):

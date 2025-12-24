@@ -37,6 +37,9 @@ class ProfileVisitTouchpoint(Touchpoint):
             - error: str or None
         """
         try:
+            # Ensure browser is initialized
+            session.ensure_browser()
+
             # Prepare profile dict for action
             profile_dict: Dict[str, Any] = {"url": self.input.url}
 

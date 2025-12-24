@@ -24,9 +24,8 @@ class ConnectTouchpoint(Touchpoint):
 
     def validate_input(self) -> None:
         """Validate touchpoint input."""
-        # Pydantic already validates, but can add business logic here
-        if not self.input.url and not self.input.public_identifier:
-            raise ValueError("Either url or public_identifier must be provided")
+        # URL is required, public_identifier is auto-extracted if not provided
+        # Pydantic already validates URL is present
 
     def execute(self, session: "AccountSession") -> Dict[str, Any]:
         """
@@ -43,9 +42,11 @@ class ConnectTouchpoint(Touchpoint):
             key = SessionKey(handle=self.input.handle, run_id=self.input.run_id)
 
             # Prepare profile dict for action
-            profile_dict: Dict[str, Any] = {}
-            if self.input.url:
-                profile_dict["url"] = self.input.url
+            # URL is always present (required field)
+            # public_identifier is auto-extracted from URL if not provided
+            profile_dict: Dict[str, Any] = {
+                "url": self.input.url,
+            }
             if self.input.public_identifier:
                 profile_dict["public_identifier"] = self.input.public_identifier
 

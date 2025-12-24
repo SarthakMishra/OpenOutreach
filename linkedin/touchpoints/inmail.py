@@ -37,6 +37,9 @@ class InMailTouchpoint(Touchpoint):
             - error: str or None (error reason: NOT_AVAILABLE, NO_CREDITS, UI_CHANGED, BLOCKED, etc.)
         """
         try:
+            # Ensure browser is initialized
+            session.ensure_browser()
+
             # Execute action
             success, error_reason = send_inmail(
                 session=session,

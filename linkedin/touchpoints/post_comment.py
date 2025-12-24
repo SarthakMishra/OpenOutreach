@@ -37,6 +37,9 @@ class PostCommentTouchpoint(Touchpoint):
             - error: str or None
         """
         try:
+            # Ensure browser is initialized
+            session.ensure_browser()
+
             # Execute action
             success = comment_on_post(
                 session=session,
