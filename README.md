@@ -4,6 +4,16 @@ This is a **proof-of-concept** API server implementation based on the [OpenOutre
 
 **Note:** This implementation is unstable and was put together in an afternoon. Do not use with a live account without thorough testing—if you do, you accept all risks.
 
+
+## 🔧 Major Changes from Upstream Project
+
+- FastAPI Server for programmatic access to LinkedIn automation
+- Replaced Playwright & Playwright-Stealth with [Patchright](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python) for better stealth and anti-detection
+- Removed message/note templating features from upstream
+- Removed CSV-based bulk input processing
+- Removed AI/LLM-based content generation features
+
+
 ## 🚀 Quick Start
 
 ### Prerequisites

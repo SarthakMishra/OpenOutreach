@@ -18,7 +18,7 @@ from linkedin.navigation.throttle import determine_batch_size
 from linkedin.sessions.registry import SessionKey
 
 if TYPE_CHECKING:
-    from playwright.sync_api import Browser, BrowserContext, Page, Playwright
+    from patchright.sync_api import Browser, BrowserContext, Page, Playwright
 
 logger = logging.getLogger(__name__)
 

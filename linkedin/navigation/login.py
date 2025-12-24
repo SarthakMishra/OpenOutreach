@@ -3,8 +3,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from playwright.sync_api import sync_playwright
-from playwright_stealth import Stealth
+from patchright.sync_api import sync_playwright
 
 from linkedin.conf import get_account_config
 from linkedin.navigation.utils import goto_page
@@ -54,26 +53,51 @@ def playwright_login(session: "AccountSession"):
     )
 
 
-def build_playwright(storage_state=None):
-    logger.debug("Launching Playwright")
+def build_playwright(user_data_dir=None):
+    """
+    Build Playwright session using Chrome with persistent context.
+
+    Following Patchright best practices:
+    - Use Chrome instead of Chromium
+    - Use launch_persistent_context for better stealth
+    - no_viewport=True to avoid fingerprint injection
+    - No custom headers/user_agent (let Chrome handle it naturally)
+    """
+    logger.debug("Launching Patchright with Chrome (undetected)")
     playwright = sync_playwright().start()
-    browser = playwright.chromium.launch(headless=False, slow_mo=200)
-    context = browser.new_context(storage_state=storage_state)
-    Stealth().apply_stealth_sync(context)
-    page = context.new_page()
+
+    # Use persistent context with Chrome (Patchright best practice)
+    context = playwright.chromium.launch_persistent_context(
+        user_data_dir=str(user_data_dir) if user_data_dir else None,
+        channel="chrome",  # Use Google Chrome instead of Chromium
+        headless=False,
+        no_viewport=True,  # Avoid fingerprint injection
+        slow_mo=200,
+        # Do NOT add custom browser headers or user_agent - let Chrome handle it
+    )
+
+    # Patchright automatically patches CDP leaks - no stealth wrapper needed
+    page = context.pages[0] if context.pages else context.new_page()
+    browser = None  # Persistent context doesn't expose browser object
+
     return page, context, browser, playwright
 
 
 def init_playwright_session(session: "AccountSession", handle: str):
     logger.info("\033[96mConfiguring browser for @%s\033[0m", handle)
     config = get_account_config(handle)
-    state_file = Path(config["cookie_file"])
+    cookie_file = Path(config["cookie_file"])
 
-    storage_state = str(state_file) if state_file.exists() else None
-    if storage_state:
-        logger.info("Devouring saved cookies → %s", state_file)
+    # Use user_data_dir for persistent context (better than storage_state for stealth)
+    # Store user data in a directory based on the cookie file location
+    user_data_dir = cookie_file.parent / f"{handle}_user_data"
 
-    session.page, session.context, session.browser, session.playwright = build_playwright(storage_state=storage_state)
+    # If we have existing cookies/storage_state, we can migrate it
+    # For now, persistent context will handle cookies automatically
+    if cookie_file.exists():
+        logger.info("Found existing session data → %s", cookie_file)
+
+    session.page, session.context, session.browser, session.playwright = build_playwright(user_data_dir=user_data_dir)
     page = session.page  # Capture for type narrowing
 
     # Set up console logging for observability
@@ -85,20 +109,22 @@ def init_playwright_session(session: "AccountSession", handle: str):
         # If observability module not available, continue without it
         pass
 
-    if not storage_state:
-        playwright_login(session)
-        state_file.parent.mkdir(parents=True, exist_ok=True)
-        session.context.storage_state(path=str(state_file))
-        logger.info("\033[92mLogin successful – session saved → %s\033[0m", state_file)
-    else:
+    # Check if we're already logged in (persistent context maintains session)
+    try:
         goto_page(
             session,
             action=lambda: page.goto(LINKEDIN_FEED_URL),
             expected_url_pattern="/feed",
-            timeout=30_000,
-            error_message="Saved session invalid",
+            timeout=10_000,
+            error_message="Checking existing session",
             to_scrape=False,
         )
+        logger.info("\033[92mUsing existing session from persistent context\033[0m")
+    except RuntimeError:
+        # Not logged in, perform login
+        logger.info("No existing session found, performing login...")
+        playwright_login(session)
+        logger.info("\033[92mLogin successful – session saved in persistent context → %s\033[0m", user_data_dir)
 
     session.page.wait_for_load_state("load")
     logger.info("\033[1;32mBrowser awake and fully authenticated!\033[0m")

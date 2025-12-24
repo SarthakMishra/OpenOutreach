@@ -19,8 +19,8 @@ COPY pyproject.toml ./
 
 RUN uv pip install --system .
 
-# Install Playwright browsers
-RUN playwright install --with-deps chromium
+# Install Patchright browsers (Chrome - recommended for best stealth)
+RUN patchright install chrome
 
 # Copy necessary startup scripts
 COPY ./scripts/start /start

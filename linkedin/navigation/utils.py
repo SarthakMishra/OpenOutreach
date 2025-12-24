@@ -3,7 +3,7 @@ import logging
 from typing import TYPE_CHECKING
 from urllib.parse import unquote, urljoin, urlparse
 
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from patchright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from linkedin.conf import FIXTURE_PAGES_DIR, OPPORTUNISTIC_SCRAPING
 from linkedin.navigation.exceptions import SkipProfile
