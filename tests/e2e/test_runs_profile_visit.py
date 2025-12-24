@@ -1,8 +1,10 @@
 # tests/e2e/test_runs_profile_visit.py
 """E2E test for profile visit touchpoint."""
+
 import pytest
 
 from tests.e2e.conftest import APIClient
+from tests.fixtures.e2e_test_data import PROFILE_VISIT_DATA
 
 
 @pytest.mark.e2e
@@ -19,11 +21,11 @@ def test_profile_visit_run(
         "handle": test_handle,
         "touchpoint": {
             "type": "profile_visit",
-            "url": "https://www.linkedin.com/in/williamhgates/",
-            "duration_s": 3.0,
-            "scroll_depth": 2,
+            "url": PROFILE_VISIT_DATA["url"],
+            "duration_s": PROFILE_VISIT_DATA["duration_s"],
+            "scroll_depth": PROFILE_VISIT_DATA["scroll_depth"],
         },
-        "tags": {"test": "e2e_profile_visit"},
+        "tags": PROFILE_VISIT_DATA["tags"],
     }
 
     # Create run
@@ -39,23 +41,12 @@ def test_profile_visit_run(
     # Poll until terminal state
     final_run = poll_run(run_id, timeout=60)
 
-    # Assert status transition
-    assert final_run["status"] in ["completed", "failed"]
-
-    # Assert result structure
-    if final_run["status"] == "completed":
-        assert final_run["result"] is not None
-        assert final_run["error"] is None
-    else:
-        assert final_run["error"] is not None
-        # On failure, screenshot and console logs may exist
-        if final_run.get("error_screenshot"):
-            assert isinstance(final_run["error_screenshot"], str)
-        if final_run.get("console_logs"):
-            assert isinstance(final_run["console_logs"], list)
+    # Assert successful completion
+    assert final_run["status"] == "completed", f"Run failed with error: {final_run.get('error')}"
+    assert final_run["result"] is not None
+    assert final_run["error"] is None
 
     # Verify run record matches API response
     get_response = api_client.get(f"/api/v1/runs/{run_id}")
     assert get_response.status_code == 200
     assert get_response.json() == final_run
-

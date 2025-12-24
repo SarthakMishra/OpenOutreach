@@ -1,8 +1,10 @@
 # tests/e2e/test_runs_message.py
 """E2E test for direct message touchpoint."""
+
 import pytest
 
 from tests.e2e.conftest import APIClient
+from tests.fixtures.e2e_test_data import DIRECT_MESSAGE_DATA
 
 
 @pytest.mark.e2e
@@ -19,11 +21,11 @@ def test_direct_message_run(
         "handle": test_handle,
         "touchpoint": {
             "type": "direct_message",
-            "url": "https://www.linkedin.com/in/test-profile/",
-            "public_identifier": "test-profile",
-            "message": "Test message from E2E test",
+            "url": DIRECT_MESSAGE_DATA["url"],
+            "public_identifier": DIRECT_MESSAGE_DATA["public_identifier"],
+            "message": DIRECT_MESSAGE_DATA["message"],
         },
-        "tags": {"test": "e2e_direct_message"},
+        "tags": DIRECT_MESSAGE_DATA["tags"],
     }
 
     # Create run
@@ -39,18 +41,12 @@ def test_direct_message_run(
     # Poll until terminal state
     final_run = poll_run(run_id, timeout=120)
 
-    # Assert status transition
-    assert final_run["status"] in ["completed", "failed"]
-
-    # Assert result structure
-    if final_run["status"] == "completed":
-        assert final_run["result"] is not None
-        assert final_run["error"] is None
-    else:
-        assert final_run["error"] is not None
+    # Assert successful completion
+    assert final_run["status"] == "completed", f"Run failed with error: {final_run.get('error')}"
+    assert final_run["result"] is not None
+    assert final_run["error"] is None
 
     # Verify run record matches API response
     get_response = api_client.get(f"/api/v1/runs/{run_id}")
     assert get_response.status_code == 200
     assert get_response.json() == final_run
-

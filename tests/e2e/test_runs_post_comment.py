@@ -1,8 +1,10 @@
 # tests/e2e/test_runs_post_comment.py
 """E2E test for post comment touchpoint."""
+
 import pytest
 
 from tests.e2e.conftest import APIClient
+from tests.fixtures.e2e_test_data import POST_COMMENT_DATA
 
 
 @pytest.mark.e2e
@@ -19,10 +21,10 @@ def test_post_comment_run(
         "handle": test_handle,
         "touchpoint": {
             "type": "post_comment",
-            "post_url": "https://www.linkedin.com/feed/update/test-post-id/",
-            "comment_text": "Test comment from E2E test",
+            "post_url": POST_COMMENT_DATA["post_url"],
+            "comment_text": POST_COMMENT_DATA["comment_text"],
         },
-        "tags": {"test": "e2e_post_comment"},
+        "tags": POST_COMMENT_DATA["tags"],
     }
 
     # Create run
@@ -38,18 +40,12 @@ def test_post_comment_run(
     # Poll until terminal state
     final_run = poll_run(run_id, timeout=120)
 
-    # Assert status transition
-    assert final_run["status"] in ["completed", "failed"]
-
-    # Assert result structure
-    if final_run["status"] == "completed":
-        assert final_run["result"] is not None
-        assert final_run["error"] is None
-    else:
-        assert final_run["error"] is not None
+    # Assert successful completion
+    assert final_run["status"] == "completed", f"Run failed with error: {final_run.get('error')}"
+    assert final_run["result"] is not None
+    assert final_run["error"] is None
 
     # Verify run record matches API response
     get_response = api_client.get(f"/api/v1/runs/{run_id}")
     assert get_response.status_code == 200
     assert get_response.json() == final_run
-

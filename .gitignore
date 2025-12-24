@@ -10,3 +10,4 @@ __pycache__/
 /linkedin_state.json
 assets/
 *.notes.md
+tests/fixtures/e2e_test_data.py
